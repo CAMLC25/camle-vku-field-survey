@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VKU Facility Command Center — Bảng Điều Hành Khảo Sát Hiện Trường</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            vku: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0052cc',
+              600: '#003b7a',
+              700: '#002e60',
+              800: '#002147',
+              900: '#001633',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(0.9); }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-vku-800 text-white shadow-md border-b border-vku-700 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Left: VKU Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-vku-600 flex items-center justify-center font-black text-white text-lg shadow-inner border border-white/20">
+          VKU
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base tracking-tight text-white">TRUNG TÂM ĐIỀU HÀNH & GIÁM SÁT HIỆN TRƯỜNG</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30 uppercase tracking-wider">Server Port 3001</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Hệ thống tiếp nhận dữ liệu khảo sát cơ sở vật chất thời gian thực</p>
+        </div>
+      </div>
+
+      <!-- Right Actions -->
+      <div class="flex items-center gap-3">
+        <!-- Live Polling Badge -->
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span>Máy chủ trực tuyến</span>
+          <span id="refreshCountdown" class="text-emerald-400/60 text-[10px]">(4s)</span>
+        </div>
+
+        <!-- Manual Refresh Button -->
+        <button id="btnRefresh" onclick="fetchSurveys(true)" class="p-2 text-slate-300 hover:text-white hover:bg-vku-700 rounded-lg transition-colors" title="Làm mới dữ liệu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+
+        <!-- CSV Export Button -->
+        <button onclick="exportCSV()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-vku-600 hover:bg-vku-500 border border-vku-500 text-white text-xs font-semibold transition-all shadow-sm active:scale-95">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span>Xuất Báo Cáo CSV</span>
+        </button>
+
+        <!-- Link to Mobile Web App -->
+        <a href="http://localhost:5173" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-semibold transition-all shadow-sm">
+          <span>📱 Mở PWA App (5173)</span>
+          <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- KPI Summary Row -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Surveys Card -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng biên bản</p>
+          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span id="statTotal" class="text-3xl font-extrabold text-slate-900 tracking-tight">0</span>
+          <span class="text-xs text-slate-500 font-medium">hồ sơ đã nạp</span>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400">Tự động đồng bộ từ PWA & Mobile</div>
+      </div>
+
+      <!-- Good Condition Card -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Hoạt động tốt</p>
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span id="statGood" class="text-3xl font-extrabold text-emerald-600 tracking-tight">0</span>
+          <span class="text-xs text-slate-500 font-medium">điểm 4 - 5 sao</span>
+        </div>
+        <div class="mt-2 text-[11px] text-emerald-600/80 font-medium">Cơ sở vật chất đạt chuẩn vận hành</div>
+      </div>
+
+      <!-- Maintenance Required Card -->
+      <div class="bg-white rounded-2xl p-5 border border-rose-100 shadow-sm relative overflow-hidden bg-rose-50/20">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold text-rose-600 uppercase tracking-wider">Cần bảo trì / Sự cố</p>
+          <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span id="statDefective" class="text-3xl font-extrabold text-rose-600 tracking-tight">0</span>
+          <span class="text-xs text-slate-500 font-medium">hạng mục hỏng</span>
+        </div>
+        <div class="mt-2 text-[11px] text-rose-600 font-semibold">Cần cử kỹ thuật viên xử lý gấp</div>
+      </div>
+
+      <!-- Photo Attachments Card -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Hồ sơ ảnh thực tế</p>
+          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span id="statPhotos" class="text-3xl font-extrabold text-indigo-600 tracking-tight">0</span>
+          <span class="text-xs text-slate-500 font-medium">ảnh chụp đính kèm</span>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400">Minh chứng hiện trường đã tải lên</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+      <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Tìm kiếm theo phòng (K.204, V.101), cán bộ, nội dung sự cố..." 
+            oninput="applyFilters()"
+            class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-vku-500 focus:bg-white transition-all"
+          >
+        </div>
+
+        <!-- Filter Dropdowns -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Category Filter -->
+          <select id="filterCategory" onchange="applyFilters()" class="text-xs font-medium px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-vku-500">
+            <option value="ALL">Tất cả hạng mục</option>
+            <option value="Hardware">Máy tính & TB Ngoại vi</option>
+            <option value="Projector">Máy chiếu & Màn chiếu</option>
+            <option value="AC">Máy lạnh / Điều hòa</option>
+            <option value="Electrical">Hệ thống Điện / Đèn</option>
+            <option value="Furniture">Bàn ghế & Nội thất</option>
+          </select>
+
+          <!-- Severity Filter -->
+          <select id="filterSeverity" onchange="applyFilters()" class="text-xs font-medium px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-vku-500">
+            <option value="ALL">Tất cả tình trạng</option>
+            <option value="DEFECTIVE">Cần sửa chữa (1 - 2 sao)</option>
+            <option value="WARNING">Cần chú ý (3 sao)</option>
+            <option value="GOOD">Hoạt động tốt (4 - 5 sao)</option>
+            <option value="PHOTO_ONLY">Có ảnh đính kèm</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Building Pill Tabs -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Khu vực:</span>
+        <button onclick="setBuildingFilter('ALL')" id="bTab-ALL" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-vku-600 text-white shadow-xs">Tất cả (Khu V, K, A, B)</button>
+        <button onclick="setBuildingFilter('Khu V')" id="bTab-Khu V" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">Khu V (Hiệu bộ & Lab)</button>
+        <button onclick="setBuildingFilter('Khu K')" id="bTab-Khu K" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">Khu K (Giảng đường chính)</button>
+        <button onclick="setBuildingFilter('Khu A')" id="bTab-Khu A" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">Khu A</button>
+        <button onclick="setBuildingFilter('Khu B')" id="bTab-Khu B" class="px-3 py-1 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">Khu B</button>
+      </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Danh sách Biên bản Khảo sát</h2>
+          <p class="text-xs text-slate-500">Dữ liệu được gửi và phân loại tự động theo chuẩn cơ sở vật chất VKU</p>
+        </div>
+        <div class="text-xs text-slate-500">
+          Hiển thị <span id="filteredCount" class="font-bold text-slate-900">0</span> / <span id="totalCount" class="font-bold text-slate-900">0</span> hồ sơ
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <th class="py-3 px-4">Thời gian</th>
+              <th class="py-3 px-4">Cán bộ kiểm định</th>
+              <th class="py-3 px-4">Vị trí phòng</th>
+              <th class="py-3 px-4">Hạng mục</th>
+              <th class="py-3 px-4">Đánh giá chất lượng</th>
+              <th class="py-3 px-4">Ghi chú sự cố</th>
+              <th class="py-3 px-4 text-center">Ảnh hiện trường</th>
+              <th class="py-3 px-4 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="surveyTableBody" class="divide-y divide-slate-100 text-xs">
+            <!-- Table rows generated dynamically -->
+            <tr>
+              <td colspan="8" class="text-center py-12 text-slate-400 font-medium">
+                <div class="flex flex-col items-center justify-center gap-2">
+                  <svg class="w-8 h-8 text-slate-300 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Đang tải dữ liệu từ máy chủ VKU...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Photo Lightbox Modal -->
+  <div id="photoModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 id="modalTitle" class="text-sm font-bold text-slate-900">Ảnh hiện trường</h3>
+          <p id="modalSubtitle" class="text-[11px] text-slate-500">Minh chứng đính kèm hồ sơ khảo sát</p>
+        </div>
+        <button onclick="closePhotoModal()" class="p-1 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 flex items-center justify-center bg-slate-950 flex-1 overflow-auto">
+        <img id="modalImg" src="" alt="Ảnh khảo sát" class="max-h-[65vh] object-contain rounded-lg shadow-lg">
+      </div>
+      <div class="px-5 py-3 bg-white border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+        <span id="modalMeta">Vị trí: --</span>
+        <button onclick="closePhotoModal()" class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Xóa bản ghi khảo sát?</h3>
+          <p class="text-xs text-slate-500">Hành động này sẽ xóa vĩnh viễn biên bản và tệp ảnh trên máy chủ.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Hủy bỏ</button>
+        <button id="btnConfirmDelete" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-side Logic Script -->
+  <script>
+    let allSurveys = [];
+    let selectedBuilding = 'ALL';
+    let currentDeleteId = null;
+    let pollInterval = null;
+    let countdown = 4;
+
+    const categoryMap = {
+      'Hardware': { label: 'Máy tính & Ngoại vi', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+      'Projector': { label: 'Máy chiếu / Màn hình', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+      'AC': { label: 'Máy lạnh / Điều hòa', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+      'Electrical': { label: 'Điện & Chiếu sáng', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+      'Furniture': { label: 'Bàn ghế & Nội thất', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    };
+
+    async function fetchSurveys(isManual = false) {
+      try {
+        const res = await fetch('/api/surveys');
+        if (!res.ok) throw new Error('Failed to load surveys');
+        const json = await res.json();
+        allSurveys = json.data || [];
+        updateStats();
+        applyFilters();
+        if (isManual) {
+          showToast('Đã làm mới dữ liệu máy chủ thành công');
+        }
+      } catch (err) {
+        console.error('Error fetching surveys:', err);
+      }
+    }
+
+    function updateStats() {
+      const total = allSurveys.length;
+      const good = allSurveys.filter(s => s.condition >= 4).length;
+      const defective = allSurveys.filter(s => s.condition <= 2).length;
+      const photos = allSurveys.filter(s => Boolean(s.photoUrl)).length;
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statGood').innerText = good;
+      document.getElementById('statDefective').innerText = defective;
+      document.getElementById('statPhotos').innerText = photos;
+      document.getElementById('totalCount').innerText = total;
+    }
+
+    function setBuildingFilter(b) {
+      selectedBuilding = b;
+      ['ALL', 'Khu V', 'Khu K', 'Khu A', 'Khu B'].forEach(k => {
+        const el = document.getElementById(`bTab-${k}`);
+        if (el) {
+          if (k === b) {
+            el.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all bg-vku-600 text-white shadow-xs';
+          } else {
+            el.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200';
+          }
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const cat = document.getElementById('filterCategory').value;
+      const sev = document.getElementById('filterSeverity').value;
+
+      const filtered = allSurveys.filter(s => {
+        // Building filter
+        if (selectedBuilding !== 'ALL' && s.building !== selectedBuilding) return false;
+
+        // Category filter
+        if (cat !== 'ALL' && s.category !== cat) return false;
+
+        // Severity filter
+        if (sev === 'DEFECTIVE' && s.condition > 2) return false;
+        if (sev === 'WARNING' && s.condition !== 3) return false;
+        if (sev === 'GOOD' && s.condition < 4) return false;
+        if (sev === 'PHOTO_ONLY' && !s.photoUrl) return false;
+
+        // Search text
+        if (search) {
+          const bMatch = (s.building || '').toLowerCase().includes(search);
+          const rMatch = (s.room || '').toLowerCase().includes(search);
+          const fMatch = (s.floor || '').toLowerCase().includes(search);
+          const nMatch = (s.defectNotes || '').toLowerCase().includes(search);
+          const iMatch = (s.inspectorName || '').toLowerCase().includes(search);
+          const idMatch = (s.inspectorId || '').toLowerCase().includes(search);
+          if (!bMatch && !rMatch && !fMatch && !nMatch && !iMatch && !idMatch) return false;
+        }
+
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(surveys) {
+      const tbody = document.getElementById('surveyTableBody');
+      document.getElementById('filteredCount').innerText = surveys.length;
+
+      if (surveys.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-12 text-slate-400">
+              <div class="flex flex-col items-center justify-center gap-1.5">
+                <span class="text-2xl">📋</span>
+                <p class="font-bold text-slate-600">Không tìm thấy biên bản khảo sát phù hợp</p>
+                <p class="text-[11px] text-slate-400">Thử thay đổi bộ lọc hoặc thêm biên bản mới từ ứng dụng di động.</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = surveys.map(s => {
+        const cMeta = categoryMap[s.category] || { label: s.category, badge: 'bg-slate-100 text-slate-700 border-slate-200' };
+        const dateStr = s.serverSyncedAt || s.createdAt;
+        const timeFormatted = new Date(dateStr).toLocaleString('vi-VN', {
+          hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+
+        // Condition badge
+        let condBadge = '';
+        if (s.condition <= 2) {
+          condBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            ${s.condition} ⭐ Hư hỏng (${s.condition <= 1 ? 'Nghiêm trọng' : 'Cần sửa'})
+          </span>`;
+        } else if (s.condition === 3) {
+          condBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            3 ⭐ Theo dõi
+          </span>`;
+        } else {
+          condBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            ${s.condition} ⭐ Hoạt động tốt
+          </span>`;
+        }
+
+        // Photo thumbnail
+        let photoCell = '<span class="text-slate-300 font-medium text-[11px]">—</span>';
+        if (s.photoUrl) {
+          photoCell = `
+            <button onclick="openPhotoModal('${s.photoUrl}', '${s.building} - ${s.floor} - ${s.room}', '${s.inspectorName || 'Cán bộ'}')" class="group relative inline-block rounded-lg overflow-hidden border border-slate-200 shadow-2xs hover:border-vku-500 transition-all">
+              <img src="${s.photoUrl}" class="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-200" alt="Hiện trường">
+              <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
+            </button>
+          `;
+        }
+
+        // Inspector avatar
+        const inspectorDisplay = s.inspectorName || 'Chưa định danh';
+        const inspectorSub = s.inspectorId ? `<span class="text-[10px] text-slate-400 font-mono">(${s.inspectorId})</span>` : '';
+
+        return `
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">${timeFormatted}</td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
+                  ${inspectorDisplay.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-800">${inspectorDisplay}</p>
+                  ${inspectorSub}
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-800 text-[11px] border border-slate-200">${s.building}</span>
+                <span class="font-semibold text-slate-700">${s.floor}</span>
+                <span class="text-slate-400">/</span>
+                <span class="font-bold text-vku-600 bg-vku-50 px-1.5 py-0.5 rounded border border-vku-100">${s.room}</span>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-medium border ${cMeta.badge}">
+                ${cMeta.label}
+              </span>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap">
+              ${condBadge}
+            </td>
+            <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${s.defectNotes || 'Không có ghi chú hư hỏng'}">
+              ${s.defectNotes ? `<span class="text-rose-900 font-medium">${s.defectNotes}</span>` : '<span class="text-slate-400 italic">Không có</span>'}
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${photoCell}
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap">
+              <button onclick="promptDelete('${s.id}')" class="p-1 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors" title="Xóa biên bản này">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openPhotoModal(url, title, inspector) {
+      document.getElementById('modalImg').src = url;
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalSubtitle').innerText = `Chụp bởi Cán bộ: ${inspector}`;
+      document.getElementById('modalMeta').innerText = `Vị trí: ${title} | Cán bộ: ${inspector}`;
+      const modal = document.getElementById('photoModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePhotoModal() {
+      const modal = document.getElementById('photoModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function promptDelete(id) {
+      currentDeleteId = id;
+      const modal = document.getElementById('deleteModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('btnConfirmDelete').onclick = executeDelete;
+    }
+
+    function closeDeleteModal() {
+      currentDeleteId = null;
+      const modal = document.getElementById('deleteModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function executeDelete() {
+      if (!currentDeleteId) return;
+      try {
+        const res = await fetch(`/api/surveys/${currentDeleteId}`, { method: 'DELETE' });
+        if (res.ok) {
+          closeDeleteModal();
+          showToast('Đã xóa biên bản thành công');
+          fetchSurveys();
+        } else {
+          alert('Không thể xóa biên bản này');
+        }
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
+    }
+
+    function exportCSV() {
+      if (allSurveys.length === 0) {
+        alert('Chưa có dữ liệu biên bản để xuất CSV');
+        return;
+      }
+
+      const headers = ['Mã biên bản (ID)', 'Thời gian đồng bộ', 'Cán bộ kiểm định', 'Mã cán bộ', 'Tòa nhà', 'Tầng', 'Phòng', 'Hạng mục', 'Tình trạng (1-5)', 'Ghi chú hư hỏng', 'Đường dẫn ảnh'];
+      const rows = allSurveys.map(s => [
+        `"${s.id}"`,
+        `"${s.serverSyncedAt || s.createdAt}"`,
+        `"${s.inspectorName || 'Cán bộ chưa định danh'}"`,
+        `"${s.inspectorId || ''}"`,
+        `"${s.building}"`,
+        `"${s.floor}"`,
+        `"${s.room}"`,
+        `"${s.category}"`,
+        s.condition,
+        `"${(s.defectNotes || '').replace(/"/g, '""')}"`,
+        `"${s.photoUrl || ''}"`
+      ]);
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `VKU_Bao_Cao_Khao_Sat_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-3 duration-200 flex items-center gap-2 border border-slate-700';
+      toast.innerHTML = `<span>✓</span> <span>${msg}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Auto-polling every 4 seconds
+    function startPolling() {
+      setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          countdown = 4;
+          fetchSurveys();
+        }
+        const cdEl = document.getElementById('refreshCountdown');
+        if (cdEl) cdEl.innerText = `(${countdown}s)`;
+      }, 1000);
+    }
+
+    // Initial load
+    fetchSurveys();
+    startPolling();
+  </script>
+</body>
+</html>
