@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardCheck, Globe, UserCheck, Monitor } from 'lucide-react';
+import { ClipboardCheck, Globe, UserCheck } from 'lucide-react';
 import { NetworkStatus } from './NetworkStatus';
 import { InspectorProfileModal } from './InspectorProfileModal';
 import { inspectorService } from '../services/inspectorService';
@@ -53,18 +53,6 @@ export const Header: React.FC = () => {
               <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span className="max-w-[70px] sm:max-w-[100px] truncate">{shortName}</span>
             </button>
-
-            {/* Server Dashboard Quick Link */}
-            <a
-              href="http://localhost:3001"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden xs:flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-semibold transition-all active:scale-95 shadow-2xs"
-              title={language === 'vi' ? 'Mở Bảng Điều Hành Server (Cổng 3001)' : 'Open Server Dashboard (Port 3001)'}
-            >
-              <Monitor className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-              <span className="hidden sm:inline">Server</span>
-            </a>
 
             {/* Language Toggle Button */}
             <button
