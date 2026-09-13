@@ -9,7 +9,9 @@
 ## 1. GENERAL INFORMATION & DELIVERABLE LINKS
 * **Team Members:**
   1. **Lê Cảm** — Student ID: **[Điền Mã SV của bạn, ví dụ: 22IT001]** — Role: **Solo Full-Stack Mobile Engineer (Architecture, Frontend PWA, Offline Database, Background Sync, Express Server)** — Contribution: **100%**
-* **🔗 Live Demo URL (Cloudflare Pages HTTPS):** [https://vku-field-survey.pages.dev](https://vku-field-survey.pages.dev) *(Xem hướng dẫn triển khai 1 phút bên dưới)*
+* **🔗 Live Demo URLs (Cloudflare HTTPS):**
+  - **Client 1 — Mobile PWA (Cán bộ Hiện trường):** [https://camle-vku-field-survey.lecam.workers.dev/](https://camle-vku-field-survey.lecam.workers.dev/)
+  - **Client 2 — Admin Command Center (Bảng Điều hành Quản trị):** [https://camle-vku-field-survey-admin.pages.dev/](https://camle-vku-field-survey-admin.pages.dev/)
 * **💻 GitHub Repository:** [https://github.com/your-username/vku-field-survey](https://github.com/your-username/vku-field-survey)
 * **🎥 Video Demo (Optional):** [Đính kèm link Google Drive / YouTube nếu có]
 
