@@ -8,7 +8,7 @@
 
 ## 1. GENERAL INFORMATION & DELIVERABLE LINKS
 * **Team Members:**
-  1. **Lê Cảm** — Student ID: **[Điền Mã SV của bạn, ví dụ: 22IT001]** — Role: **Solo Full-Stack Mobile Engineer (Architecture, Frontend PWA, Offline Database, Background Sync, Express Server)** — Contribution: **100%**
+  1. **Lê Cảm** — Student ID: **23IT022 — Role: **Solo Full-Stack Mobile Engineer (Architecture, Frontend PWA, Offline Database, Background Sync, Express Server)** — Contribution: **100%**
 * **🔗 Live Demo URLs (Cloudflare HTTPS):**
   - **Client 1 — Mobile PWA (Cán bộ Hiện trường):** [https://camle-vku-field-survey.lecam.workers.dev/](https://camle-vku-field-survey.lecam.workers.dev/)
   - **Client 2 — Admin Command Center (Bảng Điều hành Quản trị):** [https://camle-vku-field-survey-admin.pages.dev/](https://camle-vku-field-survey-admin.pages.dev/)
