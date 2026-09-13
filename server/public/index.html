@@ -317,6 +317,12 @@
 
   <!-- Client-side Logic Script -->
   <script>
+    // Automatic backend resolution: Connects to Cloudflare Worker with KV when hosted on Pages,
+    // or relative path when in local development.
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? ''
+      : 'https://camle-vku-field-survey.lecam.workers.dev';
+
     let allSurveys = [];
     let selectedBuilding = 'ALL';
     let currentDeleteId = null;
@@ -333,7 +339,7 @@
 
     async function fetchSurveys(isManual = false) {
       try {
-        const res = await fetch('/api/surveys');
+        const res = await fetch(`${API_BASE}/api/surveys`);
         if (!res.ok) throw new Error('Failed to load surveys');
         const json = await res.json();
         allSurveys = json.data || [];
@@ -554,7 +560,7 @@
     async function executeDelete() {
       if (!currentDeleteId) return;
       try {
-        const res = await fetch(`/api/surveys/${currentDeleteId}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE}/api/surveys/${currentDeleteId}`, { method: 'DELETE' });
         if (res.ok) {
           closeDeleteModal();
           showToast('Đã xóa biên bản thành công');

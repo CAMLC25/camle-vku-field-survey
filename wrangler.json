@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "camle-vku-field-survey",
+  "main": "worker.js",
+  "compatibility_date": "2024-09-23",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SURVEYS_KV",
+      "id": "67b6f6c8aac5449282e26141a523b6ae"
+    }
+  ]
+}
