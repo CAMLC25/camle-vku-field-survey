@@ -46,9 +46,28 @@ export function App() {
   // 3. Mobile Survey PWA (for Inspector, or Admin in survey preview mode)
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Admin Inspection Mode Ribbon: clearly notifies admin they are in mobile inspection simulation */}
+      {currentUser.role === 'admin' && (
+        <div className="bg-slate-900 text-white px-4 py-2 text-xs flex items-center justify-between border-b border-slate-800 sticky top-0 z-40 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-semibold text-slate-200">
+              Đang ở chế độ Kiểm định Hiện trường (Giao diện Cán bộ)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAdminViewMode('dashboard')}
+            className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] rounded-lg transition-all shadow-xs active:scale-95"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>Về Bảng điều hành</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Application Header */}
       <Header
-        onSwitchToAdmin={currentUser.role === 'admin' ? () => setAdminViewMode('dashboard') : undefined}
         onLogout={() => authService.logout()}
       />
 

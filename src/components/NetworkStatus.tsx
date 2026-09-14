@@ -74,7 +74,7 @@ export const NetworkStatus: React.FC = () => {
 
   return (
     <div
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 transition-all"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 transition-all whitespace-nowrap shrink-0"
       title={t.onlineSubtitle}
     >
       <span className="relative flex h-2 w-2">
@@ -83,7 +83,7 @@ export const NetworkStatus: React.FC = () => {
       </span>
       <span className="flex items-center gap-1">
         <Wifi className="w-3 h-3 text-emerald-600" />
-        <span>{t.online}</span>
+        <span className="hidden xs:inline">{t.online}</span>
       </span>
     </div>
   );
