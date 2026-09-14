@@ -29,6 +29,7 @@
 | **6** | **Dual-Screen Admin Dashboard** | ✅ Complete | Máy chủ Express tích hợp Bảng điều hành quản trị trực tiếp trên cổng `3001` (`/dashboard`), tự động thăm dò cập nhật (Live Polling 4s), thống kê KPI, duyệt ảnh hiện trường và xuất báo cáo CSV. |
 | **7** | **Inspector Profile Attribution** | ✅ Complete | Lưu danh tính Cán bộ kiểm định (Họ tên, Mã cán bộ, Khoa ban) vào `localStorage`. Tự động ký nhận biên bản khảo sát 100% offline. |
 | **8** | **Native Confirm Dialogs & Toasts** | ✅ Complete | Loại bỏ hoàn toàn hộp thoại thô của trình duyệt (`window.confirm`). Tích hợp `ConfirmDialog` làm mờ hậu cảnh và hệ thống `Toast Notifications` nổi đỉnh màn hình. |
+| **9** | **Capacitor Native APK Compilation** | ✅ Complete | Tích hợp `@capacitor/camera` chụp ảnh native và `@capacitor/network` giám sát mạng phần cứng. Đã biên dịch Gradle thành công tệp APK cài đặt độc lập: `vku-field-survey-debug.apk` (6.7 MB). |
 
 ---
 
