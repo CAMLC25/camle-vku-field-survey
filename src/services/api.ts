@@ -11,6 +11,29 @@ export interface UploadSurveyResponse {
   data?: any;
 }
 
+export class NetworkError extends Error {
+  isNetworkError = true;
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
+export function isNetworkError(err: any): boolean {
+  if (!err) return false;
+  if (err instanceof NetworkError || err.isNetworkError) return true;
+  if (err.name === 'AbortError') return true;
+  const msg = (err.message || '').toLowerCase();
+  return (
+    msg.includes('load failed') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('network') ||
+    msg.includes('timeout') ||
+    msg.includes('offline') ||
+    msg.includes('abort')
+  );
+}
+
 /**
  * Uploads a single survey to the backend API using multipart/form-data.
  * Includes client-generated UUID as idempotency key.
@@ -31,13 +54,13 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
   formData.append('updatedAt', survey.updatedAt);
 
   if (survey.photo) {
-    // Determine filename with appropriate extension
     const filename = `photo-${survey.id}.jpg`;
     formData.append('photo', survey.photo, filename);
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  // 25s timeout to support weak 3G / EDGE mobile networks in basements
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
     const response = await fetch(`${API_BASE}/api/surveys`, {
@@ -49,8 +72,6 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      // If deployed on a static web host (Cloudflare Pages, GitHub Pages),
-      // a POST to static file returns HTTP 405. Handle gracefully so demo doesn't get stuck.
       if (response.status === 405) {
         console.warn('[SyncService] Static web host detected (HTTP 405). Confirming client synchronization in demo mode.');
         return {
@@ -59,6 +80,11 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
           message: 'Survey synced successfully (Static host demo mode)',
           data: { ...survey }
         };
+      }
+
+      // Server gateway / timeout errors (502, 503, 504) are transient network issues
+      if (response.status >= 500) {
+        throw new NetworkError(`Máy chủ đang bận hoặc gián đoạn (HTTP ${response.status})`);
       }
 
       const errorText = await response.text().catch(() => 'Server error');
@@ -70,7 +96,10 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      throw new Error('Upload timed out after 15 seconds');
+      throw new NetworkError('Tải lên gián đoạn do mạng quá yếu (quá 25s)');
+    }
+    if (isNetworkError(err)) {
+      throw new NetworkError('Không có kết nối mạng hoặc đường truyền chập chờn');
     }
     throw err;
   }
@@ -89,15 +118,17 @@ export async function fetchServerSurveys(): Promise<any[]> {
 }
 
 /**
- * Checks server availability via health check.
+ * Checks server availability via quick lightweight health check.
+ * Uses 3-second timeout and cache-busting to bypass stale iOS browser cache.
  */
 export async function checkServerHealth(): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 3000);
 
-    const res = await fetch(`${API_BASE}/api/health`, {
-      signal: controller.signal
+    const res = await fetch(`${API_BASE}/api/health?_t=${Date.now()}`, {
+      signal: controller.signal,
+      cache: 'no-store'
     });
     clearTimeout(timeout);
     return res.ok;
@@ -105,3 +136,4 @@ export async function checkServerHealth(): Promise<boolean> {
     return false;
   }
 }
+

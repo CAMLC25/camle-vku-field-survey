@@ -1,5 +1,5 @@
 import { getPendingSurveys, updateSurveyStatus, retrySurvey } from '../db/surveyRepository';
-import { uploadSurvey } from './api';
+import { uploadSurvey, isNetworkError } from './api';
 import { networkService } from './networkService';
 import type { SyncState } from '../types/survey';
 
@@ -36,11 +36,21 @@ class SyncService {
       }
     });
 
-    // Trigger 2: Listen for Service Worker background sync messages
+    // Trigger 2: Listen for Service Worker background sync messages (Chromium / Android)
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SYNC_TRIGGERED') {
           console.log('[SyncService] Background sync message received from SW');
+          this.syncPendingSurveys();
+        }
+      });
+    }
+
+    // Trigger 3: iOS Standalone PWA lifecycle (when user resumes app from iOS Home Screen)
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          console.log('[SyncService] iOS PWA resumed into foreground. Checking sync...');
           this.syncPendingSurveys();
         }
       });
@@ -56,6 +66,7 @@ class SyncService {
 
   /**
    * Registers a Background Sync tag with the Service Worker if supported by browser.
+   * Gracefully skips on iOS Safari / WebKit without throwing.
    */
   public async requestBackgroundSync(): Promise<boolean> {
     if (
@@ -64,7 +75,6 @@ class SyncService {
       'SyncManager' in window
     ) {
       try {
-        // Protect against hanging forever when SW is not active or in dev mode
         const registration = await Promise.race([
           navigator.serviceWorker.ready,
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000))
@@ -84,8 +94,8 @@ class SyncService {
   }
 
   /**
-   * Performs sequential synchronization of all pending or failed surveys.
-   * Uploads one survey at a time, awaiting confirmation before advancing.
+   * Performs sequential synchronization of all pending surveys.
+   * Uploads one survey at a time with pre-flight check and graceful weak network handling.
    */
   public async syncPendingSurveys(): Promise<{
     processed: number;
@@ -98,10 +108,12 @@ class SyncService {
       return { processed: 0, succeeded: 0, failed: 0 };
     }
 
-    // Check actual connectivity
-    const isOnline = await networkService.getStatus();
-    if (!isOnline) {
-      console.log('[SyncService] Offline. Cannot sync surveys right now.');
+    // Pre-flight check: verify actual server connectivity
+    const isConnected = await networkService.verifyConnectivity();
+    if (!isConnected) {
+      console.log('[SyncService] Offline or weak network detected. Keeping surveys safely in offline queue.');
+      this.syncState = 'IDLE';
+      this.notify();
       return { processed: 0, succeeded: 0, failed: 0 };
     }
 
@@ -113,6 +125,7 @@ class SyncService {
     let processed = 0;
     let succeeded = 0;
     let failed = 0;
+    let stoppedEarlyDueToNetwork = false;
 
     try {
       const pending = await getPendingSurveys();
@@ -145,29 +158,53 @@ class SyncService {
             // 3. Mark status = SYNCED in IndexedDB
             await updateSurveyStatus(survey.id, 'SYNCED');
             succeeded++;
+            networkService.reportNetworkSuccess();
             console.log(`[SyncService] Successfully synced survey ${survey.id}`);
           } else {
             throw new Error(result?.message || 'Server returned unsuccessful response');
           }
         } catch (err: any) {
-          // 4. Failed: Keep survey in queue, record error, increment attempts
-          const errMsg = err?.message || 'Network or upload error';
-          console.error(`[SyncService] Failed to sync survey ${survey.id}:`, errMsg);
-          await updateSurveyStatus(survey.id, 'FAILED', errMsg);
-          failed++;
-          this.lastError = errMsg;
+          const isNetworkIssue = isNetworkError(err);
+
+          if (isNetworkIssue) {
+            // Network dropped or timed out on weak mobile signal
+            // CRITICAL: DO NOT mark survey as FAILED! Revert to PENDING_SYNC!
+            console.warn(`[SyncService] Network drop while syncing survey ${survey.id}:`, err?.message);
+            await updateSurveyStatus(
+              survey.id,
+              'PENDING_SYNC',
+              'Đã lưu an toàn trên máy (sẽ tự gửi lại khi có mạng ổn định)'
+            );
+            networkService.reportNetworkFailure();
+            stoppedEarlyDueToNetwork = true;
+            // Stop the loop immediately so other surveys don't hang and freeze UI
+            break;
+          } else {
+            // Permanent data / server error (e.g. 400 Bad Request)
+            const errMsg = err?.message || 'Lỗi xử lý dữ liệu từ máy chủ';
+            console.error(`[SyncService] Survey data rejected by server ${survey.id}:`, errMsg);
+            await updateSurveyStatus(survey.id, 'FAILED', errMsg);
+            failed++;
+            this.lastError = errMsg;
+          }
         }
 
-        // Small delay between uploads for visual feedback in demonstrations
+        // Small delay between uploads for visual feedback
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
       this.lastSyncTime = new Date().toISOString();
-      this.syncState = failed > 0 ? 'ERROR' : 'SYNCED';
+      if (stoppedEarlyDueToNetwork) {
+        // Paused cleanly without alarming the user
+        this.syncState = 'IDLE';
+        this.lastError = 'Mạng yếu hoặc mất kết nối. Dữ liệu vẫn được bảo vệ an toàn.';
+      } else {
+        this.syncState = failed > 0 ? 'ERROR' : 'SYNCED';
+      }
     } catch (err: any) {
       console.error('[SyncService] Critical error during synchronization loop:', err);
       this.syncState = 'ERROR';
-      this.lastError = err?.message || 'Synchronization halted';
+      this.lastError = err?.message || 'Đồng bộ bị gián đoạn';
     } finally {
       this.isSyncing = false;
       this.currentSurveyId = null;

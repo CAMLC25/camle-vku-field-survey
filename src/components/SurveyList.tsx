@@ -254,7 +254,7 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
   onOpenPhoto
 }) => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const categoryLabels: Record<string, string> = {
     Hardware: t.catHardware,
@@ -319,6 +319,16 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
         </p>
       )}
 
+      {/* Offline / Weak Network Note if PENDING_SYNC */}
+      {survey.status === 'PENDING_SYNC' && survey.lastSyncError && (
+        <div className="mt-2 text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200 p-2 rounded-lg flex items-start gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="leading-snug">
+            <span className="font-semibold text-amber-900">{survey.lastSyncError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Sync Error Notice if FAILED */}
       {survey.status === 'FAILED' && survey.lastSyncError && (
         <div className="mt-2 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 p-2 rounded-lg flex items-start gap-1.5">
@@ -357,15 +367,15 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
             </button>
           )}
 
-          {survey.status === 'FAILED' && (
+          {(survey.status === 'FAILED' || survey.status === 'PENDING_SYNC') && (
             <button
               type="button"
               onClick={(e) => onRetry(survey.id, e)}
               className="p-1 px-2 rounded-lg bg-vku-50 hover:bg-vku-100 text-vku-700 flex items-center gap-1 text-[11px] font-bold transition-colors"
-              title={t.btnRetry}
+              title={survey.status === 'FAILED' ? t.btnRetry : (language === 'vi' ? 'Đồng bộ ngay' : 'Sync Now')}
             >
               <RotateCw className="w-3 h-3" />
-              <span>{t.btnRetry}</span>
+              <span>{survey.status === 'FAILED' ? t.btnRetry : (language === 'vi' ? 'Đồng bộ' : 'Sync')}</span>
             </button>
           )}
 
