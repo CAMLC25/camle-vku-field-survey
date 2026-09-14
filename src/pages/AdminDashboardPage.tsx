@@ -132,7 +132,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // Delete survey
   const handleDeleteSurvey = async (id: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa phiếu khảo sát ${id} khỏi máy chủ Cloudflare?`)) return;
+    if (!confirm(`Bạn có chắc muốn xóa biên bản khảo sát ${id} khỏi hệ thống máy chủ cơ sở dữ liệu?`)) return;
     try {
       const res = await fetch(`${getApiBaseUrl()}/api/surveys/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -194,7 +194,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       'Phòng',
       'Hạng Mục',
       'Mức Độ Tình Trạng (1-5)',
-      'Ghi Chú Hư Hỏng',
+      'Mô Tả Sự Cố / Hư Hỏng',
       'Cán Bộ Kiểm Định',
       'Mã Cán Bộ',
       'Thời Gian Khảo Sát',
@@ -241,7 +241,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   BẢNG ĐIỀU HÀNH & GIÁM SÁT CƠ SỞ VẬT CHẤT
                 </h1>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-emerald-400 border border-slate-700">
-                  Cloudflare KV Connected
+                  Dữ Liệu Trực Tuyến Đã Kết Nối
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
@@ -352,7 +352,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </div>
                 </div>
                 <div className="mt-2 text-2xl font-bold text-slate-900">{stats.total}</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Dữ liệu trên Cloudflare KV</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Đồng bộ máy chủ trung tâm</p>
               </div>
 
               <div className="bg-white p-4 rounded-xl border border-red-200 shadow-xs bg-gradient-to-b from-white to-red-50/20">
@@ -450,11 +450,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-vku-600 focus:outline-none bg-white"
                 >
                   <option value="ALL">Tất cả hạng mục kiểm tra</option>
-                  <option value="Thiết bị CNTT / PC">Thiết bị CNTT / PC</option>
-                  <option value="Hệ thống điện / Chiếu sáng">Hệ thống điện / Chiếu sáng</option>
-                  <option value="Bàn ghế & Cơ sở vật chất">Bàn ghế & Cơ sở vật chất</option>
-                  <option value="Điều hòa & Quạt">Điều hòa & Quạt</option>
-                  <option value="Cửa & Kết cấu phòng">Cửa & Kết cấu phòng</option>
+                  <option value="Hardware">Máy tính & Thiết bị CNTT</option>
+                  <option value="Projector">Máy chiếu & Âm thanh</option>
+                  <option value="AC">Điều hòa & Quạt mát</option>
+                  <option value="Electrical">Hệ thống Điện & Chiếu sáng</option>
+                  <option value="Furniture">Bàn ghế & Nội thất phòng</option>
                 </select>
               </div>
             </div>
@@ -469,7 +469,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <th className="py-3 px-4">Vị trí</th>
                       <th className="py-3 px-4">Hạng mục</th>
                       <th className="py-3 px-4">Tình trạng</th>
-                      <th className="py-3 px-4">Ghi chú khuyết tật</th>
+                      <th className="py-3 px-4">Mô tả sự cố / Hư hỏng</th>
                       <th className="py-3 px-4">Cán bộ</th>
                       <th className="py-3 px-4">Thời gian</th>
                       <th className="py-3 px-4 text-center">Thao tác</th>
@@ -479,7 +479,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     {filteredSurveys.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-12 text-center text-slate-400">
-                          {loading ? 'Đang tải dữ liệu từ Cloudflare KV...' : 'Không có phiếu khảo sát nào phù hợp bộ lọc.'}
+                          {loading ? 'Đang đồng bộ dữ liệu từ máy chủ...' : 'Không có biên bản nào phù hợp bộ lọc.'}
                         </td>
                       </tr>
                     ) : (
@@ -546,7 +546,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 type="button"
                                 onClick={() => handleDeleteSurvey(s.id)}
                                 className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Xóa phiếu"
+                                title="Xóa biên bản"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>

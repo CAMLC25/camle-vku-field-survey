@@ -26,9 +26,9 @@ class CameraService {
         allowEditing: false,
         resultType: CameraResultType.Uri,
         source: CameraSource.Prompt,
-        promptLabelHeader: 'Survey Defect Photo',
-        promptLabelPhoto: 'Choose from Gallery',
-        promptLabelPicture: 'Take Photo with Camera'
+        promptLabelHeader: 'Ảnh hiện trường khảo sát',
+        promptLabelPhoto: 'Chọn ảnh từ thư viện',
+        promptLabelPicture: 'Chụp ảnh bằng máy ảnh'
       });
 
       if (!image.webPath) {

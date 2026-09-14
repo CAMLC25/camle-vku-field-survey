@@ -70,7 +70,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Kiến trúc Offline-First • Edge Runtime</span>
+            <span>Hệ Thống Số Hóa Cơ Sở Vật Chất • Ban QTCNS</span>
           </div>
         </div>
 
@@ -81,8 +81,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
               <h2 className="text-sm font-bold text-slate-900">Xác thực người dùng</h2>
               <p className="text-xs text-slate-500">Đăng nhập tài khoản định danh nội bộ</p>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-              RBAC v1.3
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Cổng Nội Bộ VKU
             </span>
           </div>
 
@@ -153,7 +153,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
           {/* Development Testing Credentials */}
           <div className="mt-5 pt-4 border-t border-slate-100">
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-2.5">
-              Tài khoản kiểm thử môi trường (Staging Profiles)
+              Tài khoản truy cập nhanh theo phân quyền
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
