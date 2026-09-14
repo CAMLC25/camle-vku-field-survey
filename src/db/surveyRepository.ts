@@ -60,6 +60,51 @@ export async function getAllSurveys(): Promise<Survey[]> {
 }
 
 /**
+ * Upserts surveys fetched from Cloudflare KV into local IndexedDB.
+ * Does NOT overwrite locally modified surveys that are pending sync.
+ */
+export async function upsertServerSurveys(serverList: any[]): Promise<number> {
+  if (!Array.isArray(serverList) || serverList.length === 0) return 0;
+  let importedCount = 0;
+
+  await db.transaction('rw', db.surveys, async () => {
+    for (const item of serverList) {
+      if (!item.id) continue;
+      const existing = await db.surveys.get(item.id);
+      // Skip if locally modified and pending sync
+      if (existing && (existing.status === 'PENDING_SYNC' || existing.status === 'SYNCING')) {
+        continue;
+      }
+
+      const survey: Survey = {
+        id: item.id,
+        building: item.building || 'Khu V',
+        floor: item.floor || 'Tầng 1',
+        room: item.room || 'V.101',
+        category: item.category || 'Hardware',
+        condition: typeof item.condition === 'number' ? item.condition : 3,
+        defectNotes: item.defectNotes || '',
+        photo: null,
+        photoUrl: item.photoUrl || undefined,
+        inspectorName: item.inspectorName || 'Cán bộ kiểm định',
+        inspectorId: item.inspectorId || '',
+        createdByEmail: item.createdByEmail || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: item.serverSyncedAt || item.createdAt || new Date().toISOString(),
+        status: 'SYNCED',
+        syncAttempts: 0,
+        lastSyncError: null
+      };
+
+      await db.surveys.put(survey);
+      importedCount++;
+    }
+  });
+
+  return importedCount;
+}
+
+/**
  * Retrieves a single survey by its UUID.
  */
 export async function getSurveyById(id: string): Promise<Survey | undefined> {

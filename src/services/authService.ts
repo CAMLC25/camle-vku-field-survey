@@ -275,6 +275,11 @@ class AuthService {
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     this.notify();
+
+    // Dynamically pull user's cloud records into local IndexedDB
+    import('./syncService').then(({ syncService }) => {
+      syncService.pullSurveysFromCloud().catch(() => {});
+    });
   }
 
   public logout() {

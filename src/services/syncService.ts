@@ -1,5 +1,5 @@
-import { getPendingSurveys, updateSurveyStatus, retrySurvey } from '../db/surveyRepository';
-import { uploadSurvey, isNetworkError } from './api';
+import { getPendingSurveys, updateSurveyStatus, retrySurvey, upsertServerSurveys } from '../db/surveyRepository';
+import { uploadSurvey, fetchServerSurveys, isNetworkError } from './api';
 import { networkService } from './networkService';
 import type { SyncState } from '../types/survey';
 
@@ -31,8 +31,8 @@ class SyncService {
     // Trigger 1: Network connectivity restored
     networkService.addListener((connected) => {
       if (connected) {
-        console.log('[SyncService] Network restored. Initiating auto-sync...');
-        this.syncPendingSurveys();
+        console.log('[SyncService] Network restored. Initiating bi-directional sync...');
+        this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
       }
     });
 
@@ -41,7 +41,7 @@ class SyncService {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SYNC_TRIGGERED') {
           console.log('[SyncService] Background sync message received from SW');
-          this.syncPendingSurveys();
+          this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
         }
       });
     }
@@ -51,15 +51,15 @@ class SyncService {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           console.log('[SyncService] iOS PWA resumed into foreground. Checking sync...');
-          this.syncPendingSurveys();
+          this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
         }
       });
     }
 
-    // Auto-sync on startup if online
+    // Auto-sync on startup if online: Push pending local drafts & Pull cloud records
     setTimeout(() => {
       if (networkService.isCurrentConnected()) {
-        this.syncPendingSurveys();
+        this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
       }
     }, 1500);
   }
@@ -225,6 +225,25 @@ class SyncService {
   }
 
   /**
+   * Pulls verified surveys from Cloudflare KV central database into local IndexedDB.
+   * Enables cross-device persistence when a user logs in from a new device or browser.
+   */
+  public async pullSurveysFromCloud(): Promise<number> {
+    if (!networkService.isCurrentConnected()) return 0;
+    try {
+      const serverSurveys = await fetchServerSurveys();
+      if (Array.isArray(serverSurveys) && serverSurveys.length > 0) {
+        const count = await upsertServerSurveys(serverSurveys);
+        console.log(`[SyncService] Successfully synchronized ${count} records from Cloudflare.`);
+        return count;
+      }
+    } catch (e) {
+      console.warn('[SyncService] Pull from Cloudflare deferred:', e);
+    }
+    return 0;
+  }
+
+  /**
    * Manual retry for a specific failed survey.
    */
   public async retrySingleSurvey(surveyId: string): Promise<void> {
@@ -235,10 +254,12 @@ class SyncService {
 
   /**
    * Manual trigger from "Sync Now" button.
+   * Performs both pushing local drafts to cloud and pulling latest cloud records.
    */
   public async syncNow(): Promise<void> {
     await networkService.verifyConnectivity(true);
     await this.syncPendingSurveys();
+    await this.pullSurveysFromCloud();
   }
 
   public subscribe(listener: SyncListener): () => void {
