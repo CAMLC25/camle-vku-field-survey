@@ -161,7 +161,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       setUserError('Vui lòng điền đủ thông tin');
       return;
     }
-    const res = await authService.register({
+    const res = await authService.createUser({
       email: newEmail,
       password: newPassword,
       fullName: newFullName,

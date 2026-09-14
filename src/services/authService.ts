@@ -157,7 +157,7 @@ class AuthService {
     return { success: true, user: sanitizedUser };
   }
 
-  public async register(params: {
+  public async createUser(params: {
     email: string;
     password: string;
     fullName: string;
@@ -178,7 +178,7 @@ class AuthService {
     // 1. Save locally immediately
     const users = this.getLocalUsers();
     if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
-      return { success: false, message: 'Email này đã được đăng ký tài khoản.' };
+      return { success: false, message: 'Email này đã được cấp tài khoản.' };
     }
 
     users.push(newUser);
@@ -204,8 +204,21 @@ class AuthService {
       createdAt: newUser.createdAt
     };
 
-    this.setSession(sanitized);
     return { success: true, user: sanitized };
+  }
+
+  public async register(params: {
+    email: string;
+    password: string;
+    fullName: string;
+    role: UserRole;
+    inspectorId?: string;
+  }): Promise<{ success: boolean; user?: User; message?: string }> {
+    const res = await this.createUser(params);
+    if (res.success && res.user) {
+      this.setSession(res.user);
+    }
+    return res;
   }
 
   public async getUsers(): Promise<User[]> {
