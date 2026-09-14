@@ -151,3 +151,11 @@ vku-field-survey/
   1. **Sequential Upload Loop**: Thiết kế động cơ đồng bộ tuần tự trong `syncService.ts`. Hàng đợi duyệt từng phần tử một (`for...of`), gửi xong biên bản này và nhận phản hồi thành công mới chuyển sang biên bản tiếp theo, kèm độ trễ 300ms nhằm mang lại phản hồi trực quan trên màn hình.
   2. **UUIDv4 Idempotency**: Mỗi biên bản được sinh mã định danh duy nhất bằng thuật toán `crypto.getRandomValues()`. Phía máy chủ Express kiểm tra khóa `id`: nếu đã tồn tại, server trả về mã `HTTP 200 (Already Exists)` kèm dữ liệu cũ mà không tạo thêm bản ghi mới.
   3. **Canvas Compression**: Ảnh chụp từ Camera được nén tự động trên Canvas xuống kích thước tối đa 1280px chất lượng 0.8 (~150KB - 250KB), giảm 90% dung lượng truyền tải so với ảnh gốc (3MB - 5MB).
+
+### 5.3. Thách thức 3: Ổn định đồng bộ trên iOS Standalone PWA khi Mất mạng & Mạng yếu
+* **Vấn đề**: Trên hệ điều hành iOS (khi thêm ứng dụng PWA vào Màn hình chính - *Add to Home Screen*), WebKit không hỗ trợ Background Sync API (`registration.sync`). Đồng thời, `navigator.onLine` của iOS thường xuyên báo sai (*false-positive online*) khi vào vùng sóng yếu/tầng hầm; và khi mạng chập chờn, lệnh `fetch` bị ngắt kết nối (`TypeError: Load failed`) khiến hệ thống trước đó dễ đánh nhầm trạng thái biên bản thành `FAILED` (Lỗi đỏ).
+* **Giải pháp**:
+  1. **Tách bạch Lỗi Mạng và Lỗi Dữ liệu**: Khi phát hiện lỗi đường truyền mạng hoặc timeout, hệ thống tuyệt đối **không** đánh dấu `FAILED` mà bảo toàn trạng thái `PENDING_SYNC` (Chờ gửi). Biên bản vẫn được lưu an toàn 100% trong Dexie IndexedDB và tự động gửi lại khi mạng ổn định.
+  2. **Active Network Probe (Kiểm tra thực tế đường truyền)**: Tích hợp hàm `verifyConnectivity()` thực hiện ping nhanh kiểm tra máy chủ (Timeout 3s, kèm tham số chống cache `_t=Date.now()`). Nếu không có phản hồi thực tế, tiến trình tải lên sẽ tự động tạm dừng mà không gây treo màn hình.
+  3. **Vòng đời ứng dụng iOS (iOS Lifecycle Listeners)**: Lắng nghe sự kiện `visibilitychange` (`document.visibilityState === 'visible'`) và `pageshow`. Mỗi khi cán bộ mở lại ứng dụng từ màn hình khóa hay chuyển qua lại giữa các ứng dụng trên iPhone, PWA tự động kiểm tra mạng và tiếp tục tiến trình đẩy hàng đợi.
+
