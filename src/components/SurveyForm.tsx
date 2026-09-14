@@ -61,6 +61,7 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
   const [condition, setCondition] = useState<number>(3);
   const [defectNotes, setDefectNotes] = useState('');
   const [photo, setPhoto] = useState<Blob | null>(null);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -149,6 +150,7 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
         condition,
         defectNotes: defectNotes.trim(),
         photo,
+        photoUrl: photoDataUrl || undefined,
         inspectorName: inspector.name,
         inspectorId: inspector.inspectorId,
         createdByEmail: liveUser?.email || ''
@@ -177,6 +179,7 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
       setIsCustomRoom(false);
       setDefectNotes('');
       setPhoto(null);
+      setPhotoDataUrl(null);
       setCondition(3);
       setErrors({});
 
@@ -441,7 +444,14 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
           <span>{t.fieldPhoto} <span className="text-slate-400 font-normal lowercase">{t.optionalLabel}</span></span>
           <span className="text-[11px] font-normal text-slate-500">{t.photoStoredLocally}</span>
         </label>
-        <PhotoCapture photo={photo} onChange={setPhoto} />
+        <PhotoCapture
+          photo={photo}
+          photoUrl={photoDataUrl}
+          onChange={(b, dUrl) => {
+            setPhoto(b);
+            setPhotoDataUrl(dUrl || (b as any)?.dataUrl || null);
+          }}
+        />
       </div>
 
       {/* Submit button */}

@@ -128,15 +128,22 @@ export default {
             const createdByEmail = formData.get('createdByEmail') || '';
             const createdAt = formData.get('createdAt') || new Date().toISOString();
 
-            // Handle photo if present (convert Blob to base64 Data URL)
+            // 1. Direct photoUrl from client (pre-compressed base64, 0ms server CPU)
+            const clientPhotoUrl = formData.get('photoUrl');
+            if (clientPhotoUrl && typeof clientPhotoUrl === 'string' && clientPhotoUrl.startsWith('data:')) {
+              photoUrl = clientPhotoUrl;
+            }
+
+            // 2. Binary file upload fallback (fast 8KB chunking)
             const photoFile = formData.get('photo');
-            if (photoFile && typeof photoFile === 'object' && photoFile.size > 0) {
+            if (!photoUrl && photoFile && typeof photoFile === 'object' && photoFile.size > 0) {
               try {
                 const arrayBuffer = await photoFile.arrayBuffer();
                 const bytes = new Uint8Array(arrayBuffer);
                 let binary = '';
-                for (let i = 0; i < bytes.byteLength; i++) {
-                  binary += String.fromCharCode(bytes[i]);
+                const chunkSize = 8192;
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                  binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
                 }
                 const base64 = btoa(binary);
                 photoUrl = `data:${photoFile.type || 'image/jpeg'};base64,${base64}`;
@@ -174,6 +181,10 @@ export default {
           const existingList = await getSurveysFromKV();
           const existingIndex = existingList.findIndex(s => s.id === surveyData.id);
           if (existingIndex >= 0) {
+            // Protect existing photo: If existing record has photoUrl and update does not, preserve it!
+            if (!surveyData.photoUrl && existingList[existingIndex].photoUrl) {
+              surveyData.photoUrl = existingList[existingIndex].photoUrl;
+            }
             existingList[existingIndex] = surveyData;
           } else {
             existingList.unshift(surveyData); // Prepend new survey

@@ -5,32 +5,42 @@ import { useLanguage } from '../context/LanguageContext';
 
 interface PhotoCaptureProps {
   photo: Blob | null;
-  onChange: (photo: Blob | null) => void;
+  photoUrl?: string | null;
+  onChange: (photo: Blob | null, dataUrl?: string | null) => void;
   disabled?: boolean;
 }
 
 export const PhotoCapture: React.FC<PhotoCaptureProps> = ({
   photo,
+  photoUrl = null,
   onChange,
   disabled = false
 }) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(photoUrl || null);
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
 
   useEffect(() => {
-    if (!photo) {
+    if (photoUrl) {
+      setPreviewUrl(photoUrl);
+      return;
+    }
+
+    if (!photo || photo.size === 0) {
       setPreviewUrl(null);
       return;
     }
 
-    const url = URL.createObjectURL(photo);
-    setPreviewUrl(url);
-
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [photo]);
+    try {
+      const url = URL.createObjectURL(photo);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } catch {
+      setPreviewUrl(null);
+    }
+  }, [photo, photoUrl]);
 
   const handleCapture = async () => {
     if (disabled || loading) return;
@@ -39,7 +49,8 @@ export const PhotoCapture: React.FC<PhotoCaptureProps> = ({
     try {
       const capturedBlob = await cameraService.capturePhoto();
       if (capturedBlob) {
-        onChange(capturedBlob);
+        const dataUrl = (capturedBlob as any).dataUrl || null;
+        onChange(capturedBlob, dataUrl);
       }
     } catch (err) {
       console.error('Photo capture error:', err);
@@ -50,7 +61,7 @@ export const PhotoCapture: React.FC<PhotoCaptureProps> = ({
 
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(null);
+    onChange(null, null);
   };
 
   const sizeKb = photo ? Math.round(photo.size / 1024) : 0;

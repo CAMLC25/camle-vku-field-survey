@@ -11,6 +11,7 @@ export interface CreateSurveyInput {
   condition: number;
   defectNotes: string;
   photo: Blob | null;
+  photoUrl?: string | null;
   inspectorName?: string;
   inspectorId?: string;
   createdByEmail?: string;
@@ -19,10 +20,13 @@ export interface CreateSurveyInput {
 /**
  * Creates a new field inspection survey, persists it to IndexedDB,
  * marks it PENDING_SYNC, and adds it to the persistent sync queue.
+ * Preserves both Blob and Base64 photoUrl to survive iOS WebKit storage eviction.
  */
 export async function createSurvey(input: CreateSurveyInput): Promise<Survey> {
   const now = new Date().toISOString();
   const id = generateUUID();
+
+  const photoUrl = input.photoUrl || (input.photo as any)?.dataUrl || undefined;
 
   const survey: Survey = {
     id,
@@ -33,6 +37,7 @@ export async function createSurvey(input: CreateSurveyInput): Promise<Survey> {
     condition: input.condition,
     defectNotes: input.defectNotes?.trim() || '',
     photo: input.photo,
+    photoUrl,
     inspectorName: input.inspectorName || 'Cán bộ chưa định danh',
     inspectorId: input.inspectorId || '',
     createdByEmail: input.createdByEmail || '',
@@ -62,6 +67,7 @@ export async function getAllSurveys(): Promise<Survey[]> {
 /**
  * Upserts surveys fetched from Cloudflare KV into local IndexedDB.
  * Does NOT overwrite locally modified surveys that are pending sync.
+ * Skips unchanged records to prevent iOS WebKit main-thread freezes.
  */
 export async function upsertServerSurveys(serverList: any[]): Promise<number> {
   if (!Array.isArray(serverList) || serverList.length === 0) return 0;
@@ -71,8 +77,23 @@ export async function upsertServerSurveys(serverList: any[]): Promise<number> {
     for (const item of serverList) {
       if (!item.id) continue;
       const existing = await db.surveys.get(item.id);
-      // Skip if locally modified and pending sync
+
+      // Skip if locally modified and pending sync or actively syncing
       if (existing && (existing.status === 'PENDING_SYNC' || existing.status === 'SYNCING')) {
+        continue;
+      }
+
+      const finalPhotoUrl = item.photoUrl || existing?.photoUrl || undefined;
+      const finalPhoto = existing?.photo || null;
+      const updatedAt = item.serverSyncedAt || item.createdAt || new Date().toISOString();
+
+      // Performance guard for iOS: If the survey is already synced and untouched, skip re-writing
+      if (
+        existing &&
+        existing.status === 'SYNCED' &&
+        existing.photoUrl === finalPhotoUrl &&
+        existing.updatedAt === updatedAt
+      ) {
         continue;
       }
 
@@ -84,13 +105,13 @@ export async function upsertServerSurveys(serverList: any[]): Promise<number> {
         category: item.category || 'Hardware',
         condition: typeof item.condition === 'number' ? item.condition : 3,
         defectNotes: item.defectNotes || '',
-        photo: existing?.photo || null,
-        photoUrl: item.photoUrl || existing?.photoUrl || undefined,
+        photo: finalPhoto,
+        photoUrl: finalPhotoUrl,
         inspectorName: item.inspectorName || 'Cán bộ kiểm định',
         inspectorId: item.inspectorId || '',
         createdByEmail: item.createdByEmail || '',
         createdAt: item.createdAt || new Date().toISOString(),
-        updatedAt: item.serverSyncedAt || item.createdAt || new Date().toISOString(),
+        updatedAt,
         status: 'SYNCED',
         syncAttempts: 0,
         lastSyncError: null

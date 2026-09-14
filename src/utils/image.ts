@@ -1,18 +1,61 @@
 /**
- * Compresses an image File or Blob to a maximum dimension (default 1280px) and JPEG quality (default 0.8).
- * Ensures memory-efficient IndexedDB storage and quick network synchronization.
+ * Image compression and WebKit-safe Data URL utilities for VKU Field Survey.
+ * Solves iOS Safari IndexedDB Blob deletion/zero-byte bugs by maintaining
+ * both binary Blobs and durable Base64 Data URL strings.
  */
-export async function compressImage(
-  fileOrBlob: Blob,
-  maxDimension = 1280,
-  quality = 0.8
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    // If it's already small (< 150KB), no need to compress
-    if (fileOrBlob.size < 150 * 1024) {
-      return resolve(fileOrBlob);
-    }
 
+export interface CompressResult {
+  blob: Blob;
+  dataUrl: string;
+}
+
+/**
+ * Converts a base64 Data URL string to a standard binary Blob.
+ */
+export function dataURLtoBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const binaryStr = atob(parts[1]);
+  const len = binaryStr.length;
+  const u8arr = new Uint8Array(len);
+
+  for (let i = 0; i < len; i++) {
+    u8arr[i] = binaryStr.charCodeAt(i);
+  }
+
+  return new Blob([u8arr], { type: mime });
+}
+
+/**
+ * Converts a Blob to a base64 Data URL string via FileReader.
+ */
+export function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Failed to convert blob to data URL'));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Compresses an image File or Blob to a maximum dimension (default 960px) and JPEG quality (default 0.65).
+ * Generates both a binary Blob and a durable Data URL string in one pass.
+ * Typical output size: 40KB - 85KB (drastically speeds up iOS uploads and prevents UI freezes).
+ */
+export async function compressImageWithDataUrl(
+  fileOrBlob: Blob,
+  maxDimension = 960,
+  quality = 0.65
+): Promise<CompressResult> {
+  return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(fileOrBlob);
     const img = new Image();
 
@@ -36,22 +79,31 @@ export async function compressImage(
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        return resolve(fileOrBlob);
+        blobToDataURL(fileOrBlob).then((dataUrl) => {
+          resolve({ blob: fileOrBlob, dataUrl });
+        }).catch(() => {
+          resolve({ blob: fileOrBlob, dataUrl: '' });
+        });
+        return;
       }
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      canvas.toBlob(
-        (blob) => {
-          if (blob && blob.size < fileOrBlob.size) {
-            resolve(blob);
-          } else {
-            resolve(fileOrBlob);
-          }
-        },
-        'image/jpeg',
-        quality
-      );
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const blob = dataURLtoBlob(dataUrl);
+        resolve({ blob, dataUrl });
+      } catch (err) {
+        canvas.toBlob(
+          async (b) => {
+            const finalBlob = b || fileOrBlob;
+            const dataUrl = await blobToDataURL(finalBlob).catch(() => '');
+            resolve({ blob: finalBlob, dataUrl });
+          },
+          'image/jpeg',
+          quality
+        );
+      }
     };
 
     img.onerror = (err) => {
@@ -64,9 +116,26 @@ export async function compressImage(
 }
 
 /**
- * Creates an object URL for a Blob and provides an auto-cleanup helper.
+ * Backwards-compatible compressImage function returning a Blob with attached dataUrl.
+ */
+export async function compressImage(
+  fileOrBlob: Blob,
+  maxDimension = 960,
+  quality = 0.65
+): Promise<Blob> {
+  const result = await compressImageWithDataUrl(fileOrBlob, maxDimension, quality);
+  (result.blob as any).dataUrl = result.dataUrl;
+  return result.blob;
+}
+
+/**
+ * Helper to safely create an object URL with null checking.
  */
 export function createBlobUrl(blob: Blob | null): string | null {
-  if (!blob) return null;
-  return URL.createObjectURL(blob);
+  if (!blob || blob.size === 0) return null;
+  try {
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
 }

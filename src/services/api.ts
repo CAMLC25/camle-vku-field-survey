@@ -1,5 +1,6 @@
 import type { Survey } from '../types/survey';
 import { getApiBaseUrl } from '../config/apiConfig';
+import { dataURLtoBlob } from '../utils/image';
 
 // Resolves dynamically: on Native Android Capacitor, routes to Cloudflare Worker.
 const API_BASE = getApiBaseUrl();
@@ -37,6 +38,7 @@ export function isNetworkError(err: any): boolean {
 /**
  * Uploads a single survey to the backend API using multipart/form-data.
  * Includes client-generated UUID as idempotency key.
+ * Automatically recovers from iOS Safari 0-byte Blob bugs using photoUrl.
  */
 export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse> {
   const formData = new FormData();
@@ -54,14 +56,34 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
   formData.append('createdAt', survey.createdAt);
   formData.append('updatedAt', survey.updatedAt);
 
-  if (survey.photo) {
+  // 1. Resolve photo: if Blob is missing or 0 bytes (WebKit bug), reconstruct from photoUrl
+  let photoToUpload: Blob | null = survey.photo;
+  if (
+    (!photoToUpload || photoToUpload.size === 0) &&
+    survey.photoUrl &&
+    survey.photoUrl.startsWith('data:')
+  ) {
+    try {
+      photoToUpload = dataURLtoBlob(survey.photoUrl);
+      console.log(`[uploadSurvey] Restored photo blob from photoUrl for survey ${survey.id} (${photoToUpload.size} bytes)`);
+    } catch (e) {
+      console.warn('[uploadSurvey] Failed to reconstruct blob from data URL:', e);
+    }
+  }
+
+  if (photoToUpload && photoToUpload.size > 0) {
     const filename = `photo-${survey.id}.jpg`;
-    formData.append('photo', survey.photo, filename);
+    formData.append('photo', photoToUpload, filename);
+  }
+
+  // 2. Also attach photoUrl directly if available
+  if (survey.photoUrl && survey.photoUrl.startsWith('data:')) {
+    formData.append('photoUrl', survey.photoUrl);
   }
 
   const controller = new AbortController();
-  // 25s timeout to support weak 3G / EDGE mobile networks in basements
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  // 12s timeout for agile mobile sync without hanging
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   try {
     const response = await fetch(`${API_BASE}/api/surveys`, {
@@ -103,7 +125,7 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      throw new NetworkError('Tải lên gián đoạn do mạng quá yếu (quá 25s)');
+      throw new NetworkError('Tải lên gián đoạn do mạng quá yếu (quá 12s)');
     }
     if (isNetworkError(err)) {
       throw new NetworkError('Không có kết nối mạng hoặc đường truyền chập chờn');
@@ -113,15 +135,31 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
 }
 
 /**
- * Retrieves all synchronized surveys from the server.
+ * Retrieves all synchronized surveys from the server with 10s timeout protection.
  */
 export async function fetchServerSurveys(): Promise<any[]> {
-  const response = await fetch(`${API_BASE}/api/surveys`);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} failed to fetch surveys`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(`${API_BASE}/api/surveys`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} failed to fetch surveys`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      console.warn('[api] fetchServerSurveys timed out after 10s');
+      return [];
+    }
+    throw err;
   }
-  const result = await response.json();
-  return result.data || [];
 }
 
 /**

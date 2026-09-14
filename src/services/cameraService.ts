@@ -39,8 +39,8 @@ class CameraService {
       const response = await fetch(image.webPath);
       const rawBlob = await response.blob();
 
-      // Compress to ensure efficient IndexedDB storage
-      return await compressImage(rawBlob, 1280, 0.8);
+      // Compress to ensure efficient IndexedDB storage and rapid upload
+      return await compressImage(rawBlob, 960, 0.65);
     } catch (err: any) {
       // User cancelled camera prompt or denied permission
       if (err?.message?.includes('User cancelled') || err?.message?.includes('canceled')) {
@@ -83,7 +83,7 @@ class CameraService {
         }
 
         try {
-          const compressed = await compressImage(file, 1280, 0.8);
+          const compressed = await compressImage(file, 960, 0.65);
           resolve(compressed);
         } catch (err) {
           console.error('Failed to compress web captured image:', err);

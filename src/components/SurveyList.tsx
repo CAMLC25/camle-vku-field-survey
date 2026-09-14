@@ -284,12 +284,21 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
   };
 
   React.useEffect(() => {
-    if (survey.photo) {
-      const url = URL.createObjectURL(survey.photo);
-      setPhotoUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else if (survey.photoUrl) {
+    // 1. Prioritize durable Base64 Data URL (immune to iOS WebKit Blob eviction bugs)
+    if (survey.photoUrl && survey.photoUrl.trim() !== '') {
       setPhotoUrl(survey.photoUrl);
+      return;
+    }
+
+    // 2. Fall back to Blob object URL if photo is valid and non-empty
+    if (survey.photo && survey.photo.size > 0) {
+      try {
+        const url = URL.createObjectURL(survey.photo);
+        setPhotoUrl(url);
+        return () => URL.revokeObjectURL(url);
+      } catch {
+        setPhotoUrl(null);
+      }
     } else {
       setPhotoUrl(null);
     }

@@ -13,6 +13,9 @@ export type SyncListener = (state: {
 
 class SyncService {
   private isSyncing = false;
+  private isPulling = false;
+  private lastPullTime = 0;
+  private syncDebounceTimer: any = null;
   private syncState: SyncState = 'IDLE';
   private lastSyncTime: string | null = null;
   private lastError: string | null = null;
@@ -24,6 +27,17 @@ class SyncService {
     this.init();
   }
 
+  private triggerBiDirectionalSync(delayMs = 300) {
+    if (this.syncDebounceTimer) clearTimeout(this.syncDebounceTimer);
+    this.syncDebounceTimer = setTimeout(async () => {
+      await this.syncPendingSurveys();
+      // Small pause before pull to allow UI thread to breathe on iOS WebKit
+      setTimeout(() => {
+        this.pullSurveysFromCloud().catch(() => {});
+      }, 400);
+    }, delayMs);
+  }
+
   private init() {
     if (this.initialized) return;
     this.initialized = true;
@@ -31,8 +45,8 @@ class SyncService {
     // Trigger 1: Network connectivity restored
     networkService.addListener((connected) => {
       if (connected) {
-        console.log('[SyncService] Network restored. Initiating bi-directional sync...');
-        this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+        console.log('[SyncService] Network restored. Debouncing bi-directional sync...');
+        this.triggerBiDirectionalSync(400);
       }
     });
 
@@ -41,7 +55,7 @@ class SyncService {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SYNC_TRIGGERED') {
           console.log('[SyncService] Background sync message received from SW');
-          this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+          this.triggerBiDirectionalSync(200);
         }
       });
     }
@@ -53,16 +67,15 @@ class SyncService {
           console.log('[SyncService] iOS PWA resumed into foreground. Checking sync...');
           networkService.verifyConnectivity(true).then((online) => {
             if (online) {
-              this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+              this.triggerBiDirectionalSync(500);
             }
           });
         }
       });
     }
 
-    // Trigger 4: Periodic auto-sync worker (every 5 seconds)
-    // iOS WebKit background sync is unsupported, so this proactive loop checks if pending surveys exist
-    // and syncs immediately once network connectivity is verified.
+    // Trigger 4: Periodic auto-sync worker (every 10 seconds)
+    // Checks if pending surveys exist and syncs if online
     setInterval(async () => {
       if (this.isSyncing) return;
       try {
@@ -74,12 +87,12 @@ class SyncService {
       } catch (err) {
         // silent check
       }
-    }, 5000);
+    }, 10000);
 
     // Auto-sync on startup if online: Push pending local drafts & Pull cloud records
     setTimeout(() => {
       if (networkService.isCurrentConnected()) {
-        this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+        this.triggerBiDirectionalSync(1000);
       }
     }, 1500);
   }
@@ -175,11 +188,10 @@ class SyncService {
           const result = await uploadSurvey(survey);
 
           if (result && result.success) {
-            // 3. Mark status = SYNCED in IndexedDB and save photoUrl if returned
-            const extra: Partial<Survey> = {};
-            if (result.data?.photoUrl) {
-              extra.photoUrl = result.data.photoUrl;
-            }
+            // 3. Mark status = SYNCED in IndexedDB and preserve photoUrl
+            const extra: Partial<Survey> = {
+              photoUrl: result.data?.photoUrl || survey.photoUrl
+            };
             await updateSurveyStatus(survey.id, 'SYNCED', null, extra);
             succeeded++;
             networkService.reportNetworkSuccess();
@@ -251,9 +263,17 @@ class SyncService {
   /**
    * Pulls verified surveys from Cloudflare KV central database into local IndexedDB.
    * Enables cross-device persistence when a user logs in from a new device or browser.
+   * Guarded with mutex and 8-second debounce to prevent iOS WebKit main-thread lock.
    */
   public async pullSurveysFromCloud(): Promise<number> {
+    if (this.isPulling) return 0;
+    const now = Date.now();
+    if (now - this.lastPullTime < 8000) return 0;
     if (!networkService.isCurrentConnected()) return 0;
+
+    this.isPulling = true;
+    this.lastPullTime = now;
+
     try {
       const serverSurveys = await fetchServerSurveys();
       if (Array.isArray(serverSurveys) && serverSurveys.length > 0) {
@@ -263,6 +283,8 @@ class SyncService {
       }
     } catch (e) {
       console.warn('[SyncService] Pull from Cloudflare deferred:', e);
+    } finally {
+      this.isPulling = false;
     }
     return 0;
   }
