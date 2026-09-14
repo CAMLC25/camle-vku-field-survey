@@ -79,23 +79,29 @@ class NetworkService {
   }
 
   /**
-   * Proactive heartbeat polling (every 4 seconds).
+   * Proactive heartbeat polling (every 3 seconds when offline/recovering, 6 seconds when online).
    * Essential for iOS PWA: when mobile network drops and reconnects while remaining in the app,
-   * WebKit DOES NOT update navigator.onLine or fire 'online' event automatically.
-   * This periodic ping guarantees auto-recovery within 4 seconds of network restoration.
+   * WebKit DOES NOT update navigator.onLine or fire 'online' event reliably.
+   * This periodic ping guarantees auto-recovery immediately upon network restoration.
    */
   private startHeartbeat() {
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
 
     this.heartbeatInterval = setInterval(async () => {
-      // If currently disconnected or document is visible, run quick check
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
-        return; // Don't drain battery when app is hidden in background
+      // If app is in the background, only throttle, don't completely halt verification
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
+
+      // If browser explicitly says offline, mark false directly without hanging fetch
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        this.notify(false);
+        return;
       }
 
       const isHealthy = await checkServerHealth();
       this.notify(isHealthy);
-    }, 4000);
+    }, 3000);
   }
 
   /**
@@ -130,8 +136,8 @@ class NetworkService {
   }
 
   private notify(connected: boolean) {
-    if (this.isConnected === connected && this.listeners.size > 0) return;
     const previousState = this.isConnected;
+    if (previousState === connected) return;
     this.isConnected = connected;
 
     this.listeners.forEach((callback) => {

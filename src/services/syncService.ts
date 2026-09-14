@@ -51,10 +51,30 @@ class SyncService {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           console.log('[SyncService] iOS PWA resumed into foreground. Checking sync...');
-          this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+          networkService.verifyConnectivity(true).then((online) => {
+            if (online) {
+              this.syncPendingSurveys().then(() => this.pullSurveysFromCloud());
+            }
+          });
         }
       });
     }
+
+    // Trigger 4: Periodic auto-sync worker (every 5 seconds)
+    // iOS WebKit background sync is unsupported, so this proactive loop checks if pending surveys exist
+    // and syncs immediately once network connectivity is verified.
+    setInterval(async () => {
+      if (this.isSyncing) return;
+      try {
+        const pending = await getPendingSurveys();
+        if (pending.length > 0 && networkService.isCurrentConnected()) {
+          console.log(`[SyncService] iOS Auto-sync found ${pending.length} pending surveys. Syncing...`);
+          await this.syncPendingSurveys();
+        }
+      } catch (err) {
+        // silent check
+      }
+    }, 5000);
 
     // Auto-sync on startup if online: Push pending local drafts & Pull cloud records
     setTimeout(() => {

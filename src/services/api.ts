@@ -92,7 +92,13 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (parseErr) {
+      console.warn('[api] Response is not valid JSON, handling as NetworkError:', parseErr);
+      throw new NetworkError('Phản hồi từ máy chủ không hợp lệ, sẽ tự thử lại');
+    }
     return data;
   } catch (err: any) {
     clearTimeout(timeoutId);

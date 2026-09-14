@@ -3,6 +3,7 @@ import { Building2, Layers, DoorOpen, Tag, FileText, CheckCircle2, AlertCircle, 
 import { SURVEY_CATEGORIES, type SurveyCategory, type InspectorProfile } from '../types/survey';
 import { createSurvey } from '../db/surveyRepository';
 import { syncService } from '../services/syncService';
+import { networkService } from '../services/networkService';
 import { inspectorService } from '../services/inspectorService';
 import { authService } from '../services/authService';
 import { ConditionRating } from './ConditionRating';
@@ -154,8 +155,11 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
       });
 
       // 2. Non-blocking background sync registration & auto-sync trigger
+      // On iOS Safari / Offline, syncService will safely queue or gracefully defer
       syncService.requestBackgroundSync().catch(() => {});
-      syncService.syncPendingSurveys().catch(() => {});
+      if (networkService.isCurrentConnected()) {
+        syncService.syncPendingSurveys().catch(() => {});
+      }
 
       setSuccessMessage(t.surveySavedSuccess.replace('{id}', created.id.slice(0, 8)));
       showToast({
