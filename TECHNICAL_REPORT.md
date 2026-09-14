@@ -10,9 +10,9 @@
 * **Team Members:**
   1. **Lê Cảm** — Student ID: **23IT022 — Role: **Solo Full-Stack Mobile Engineer (Architecture, Frontend PWA, Offline Database, Background Sync, Express Server)** — Contribution: **100%**
 * **🔗 Live Demo URLs (Cloudflare HTTPS):**
-  - **Client 1 — Mobile PWA (Cán bộ Hiện trường):** [https://camle-vku-field-survey.lecam.workers.dev/](https://camle-vku-field-survey.lecam.workers.dev/)
-  - **Client 2 — Admin Command Center (Bảng Điều hành Quản trị):** [https://camle-vku-field-survey-admin.pages.dev/](https://camle-vku-field-survey-admin.pages.dev/)
-* **💻 GitHub Repository:** [https://github.com/your-username/vku-field-survey](https://github.com/your-username/vku-field-survey)
+  - **PWA Live Demo (Cloudflare Pages):** [https://camle-vku-field-survey.pages.dev](https://camle-vku-field-survey.pages.dev)
+  - **Unified Full-Stack Edge (Cloudflare Workers & KV):** [https://camle-vku-field-survey.lecam.workers.dev](https://camle-vku-field-survey.lecam.workers.dev)
+* **💻 GitHub Repository:** [https://github.com/CAMLC25/camle-vku-field-survey](https://github.com/CAMLC25/camle-vku-field-survey)
 * **🎥 Video Demo (Optional):** [Đính kèm link Google Drive / YouTube nếu có]
 
 ---

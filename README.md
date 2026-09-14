@@ -8,9 +8,10 @@
 An offline-first field inspection mobile and web application built for the **Vietnam-Korea University of Information and Communication Technology (VKU)** campus. Designed specifically for facilities inspectors working in network-denied locations such as basements, electrical vaults, and remote laboratories.
 
 ### 🌐 Live Production Deployments (Cloudflare HTTPS)
-- **Client 1 — Field Inspector Mobile PWA:** [https://camle-vku-field-survey.lecam.workers.dev/](https://camle-vku-field-survey.lecam.workers.dev/)
-- **Client 2 — Facility Command Center Admin Portal:** [https://camle-vku-field-survey-admin.pages.dev/](https://camle-vku-field-survey-admin.pages.dev/)
-- **Lead Engineer / Author:** **Lê Cảm** (100% Solo Contribution)
+- **Live PWA App (Cloudflare Pages):** [https://camle-vku-field-survey.pages.dev](https://camle-vku-field-survey.pages.dev)
+- **Unified Full-Stack Edge (Cloudflare Workers & KV):** [https://camle-vku-field-survey.lecam.workers.dev/](https://camle-vku-field-survey.lecam.workers.dev/)
+- **GitHub Repository:** [https://github.com/CAMLC25/camle-vku-field-survey](https://github.com/CAMLC25/camle-vku-field-survey)
+- **Lead Engineer / Author:** **Lê Cảm** (Mã SV: **23IT022**) — 100% Solo Contribution
 
 ---
 
