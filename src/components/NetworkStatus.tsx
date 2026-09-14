@@ -17,17 +17,33 @@ export const NetworkStatus: React.FC = () => {
   const { t } = useLanguage();
 
   if (!isOnline) {
+    if (pendingCount > 0) {
+      return (
+        <button
+          type="button"
+          onClick={() => syncNow()}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-all active:scale-95"
+          title={t.pendingSurveysToSync.replace('{count}', String(pendingCount))}
+        >
+          <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+          <span>
+            {t.statPending}: {pendingCount}
+          </span>
+        </button>
+      );
+    }
+
     return (
-      <div
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 transition-all"
-        title={pendingCount > 0 ? t.pendingSurveysToSync.replace('{count}', String(pendingCount)) : t.offlineSubtitle}
+      <button
+        type="button"
+        onClick={() => syncNow()}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 transition-all active:scale-95"
+        title={t.offlineSubtitle}
       >
         <WifiOff className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-        <span>
-          {t.offline}
-          {pendingCount > 0 && ` (${pendingCount})`}
-        </span>
-      </div>
+        <span>{t.offline}</span>
+      </button>
     );
   }
 

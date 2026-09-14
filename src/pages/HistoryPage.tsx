@@ -2,7 +2,6 @@ import React from 'react';
 import { ArrowLeft, RefreshCw, PlusCircle } from 'lucide-react';
 import { SurveyList } from '../components/SurveyList';
 import { useSync } from '../hooks/useSync';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useLanguage } from '../context/LanguageContext';
 
 interface HistoryPageProps {
@@ -11,7 +10,6 @@ interface HistoryPageProps {
 
 export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigate }) => {
   const { isSyncing, syncNow } = useSync();
-  const { isOnline } = useNetworkStatus();
   const { t } = useLanguage();
 
   return (
@@ -31,8 +29,8 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigate }) => {
           <button
             type="button"
             onClick={() => syncNow()}
-            disabled={isSyncing || !isOnline}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-vku-50 text-vku-700 hover:bg-vku-100 border border-vku-200 disabled:opacity-60"
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-vku-50 text-vku-700 hover:bg-vku-100 border border-vku-200 disabled:opacity-60 active:scale-95 transition-all"
             title={t.btnSyncAll}
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />

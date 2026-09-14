@@ -109,7 +109,7 @@ class SyncService {
     }
 
     // Pre-flight check: verify actual server connectivity
-    const isConnected = await networkService.verifyConnectivity();
+    const isConnected = await networkService.verifyConnectivity(true);
     if (!isConnected) {
       console.log('[SyncService] Offline or weak network detected. Keeping surveys safely in offline queue.');
       this.syncState = 'IDLE';
@@ -229,6 +229,7 @@ class SyncService {
    */
   public async retrySingleSurvey(surveyId: string): Promise<void> {
     await retrySurvey(surveyId);
+    await networkService.verifyConnectivity(true);
     await this.syncPendingSurveys();
   }
 
@@ -236,6 +237,7 @@ class SyncService {
    * Manual trigger from "Sync Now" button.
    */
   public async syncNow(): Promise<void> {
+    await networkService.verifyConnectivity(true);
     await this.syncPendingSurveys();
   }
 
