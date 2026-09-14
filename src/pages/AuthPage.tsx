@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, UserCheck, Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, Info } from 'lucide-react';
+import { Lock, Mail, AlertCircle, CheckCircle2, ArrowRight, Info, ShieldCheck, UserCheck } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface AuthPageProps {
@@ -22,16 +22,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
       if (res.success) {
         onSuccess();
       } else {
-        setError(res.message || 'Email hoặc mật khẩu không chính xác.');
+        setError(res.message || 'Thông tin xác thực không chính xác.');
       }
     } catch {
-      setError('Đã xảy ra lỗi kết nối tới máy chủ.');
+      setError('Không thể thiết lập kết nối tới dịch vụ xác thực.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickDemo = async (roleType: 'inspector' | 'admin') => {
+  const handleQuickCredential = async (roleType: 'inspector' | 'admin') => {
     setError(null);
     setLoading(true);
     try {
@@ -47,45 +47,47 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
         if (res.success) onSuccess();
       }
     } catch {
-      setError('Lỗi đăng nhập nhanh thử nghiệm');
+      setError('Lỗi kích hoạt phiên kiểm thử.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-vku-900 to-slate-900 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 selection:bg-blue-600 selection:text-white">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
         
         {/* VKU Header Banner */}
-        <div className="bg-vku-800 px-6 py-8 text-white text-center relative overflow-hidden">
-          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white text-vku-800 font-black text-2xl shadow-lg shadow-black/20 mb-3 border-2 border-blue-400">
+        <div className="bg-slate-900 px-6 py-7 text-white text-center border-b border-slate-800">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white font-bold text-xl tracking-tight mb-3 shadow-sm shadow-blue-600/30">
             VKU
           </div>
-          <h1 className="text-xl font-extrabold tracking-tight">HỆ THỐNG KHẢO SÁT HIỆN TRƯỜNG</h1>
-          <p className="text-xs text-blue-200 mt-1 font-medium">Trường Đại học Công nghệ Thông tin & Truyền thông Việt - Hàn</p>
-          <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Hỗ trợ xác thực Offline & Online</span>
+          <h1 className="text-base font-bold tracking-tight text-slate-100">
+            HỆ THỐNG QUẢN LÝ KHẢO SÁT CƠ SỞ VẬT CHẤT
+          </h1>
+          <p className="text-xs text-slate-400 mt-1 font-medium">
+            Trường Đại học CNTT & Truyền thông Việt - Hàn
+          </p>
+          <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-medium">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Kiến trúc Offline-First • Edge Runtime</span>
           </div>
         </div>
 
         {/* Login Form Body */}
         <div className="p-6">
-          
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-extrabold text-slate-800">Đăng Nhập Hệ Thống</h2>
-              <p className="text-[11px] text-slate-500">Nhập tài khoản được Ban Quản Trị cấp</p>
+              <h2 className="text-sm font-bold text-slate-900">Xác thực người dùng</h2>
+              <p className="text-xs text-slate-500">Đăng nhập tài khoản định danh nội bộ</p>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-              Single Domain
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+              RBAC v1.3
             </span>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
+            <div className="mb-4 p-3 bg-red-50/80 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-700">
               <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -93,35 +95,35 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Cán bộ / Quản trị
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Tài khoản Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="canbo@vku.udn.vn"
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-vku-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none transition-shadow"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
                 Mật khẩu
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-vku-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none transition-shadow"
                 />
               </div>
             </div>
@@ -129,58 +131,58 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-vku-600 hover:bg-vku-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-vku-600/30 flex items-center justify-center gap-1.5 disabled:opacity-50 mt-4"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 mt-4"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  <span>Đăng Nhập</span>
+                  <span>Xác thực & Truy cập</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Notice about account provisioning */}
-          <div className="mt-4 p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-2 text-[11px] text-blue-800">
-            <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-            <span>Tài khoản do <strong>Quản trị viên (Admin)</strong> cấp phát và phân quyền. Liên hệ phòng Quản trị CSVC nếu bạn chưa có tài khoản.</span>
+          {/* Access Policy Notice */}
+          <div className="mt-4 p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-start gap-2 text-[11px] text-slate-600">
+            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+            <span>Phân quyền tài khoản do Ban Quản Trị phụ trách. Liên hệ bộ phận Kỹ thuật nếu cần cấp quyền mới.</span>
           </div>
 
-          {/* Quick Demo 1-tap logins */}
+          {/* Development Testing Credentials */}
           <div className="mt-5 pt-4 border-t border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">
-              Đăng nhập nhanh thử nghiệm (1 chạm)
-            </p>
+            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-2.5">
+              Tài khoản kiểm thử môi trường (Staging Profiles)
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickDemo('inspector')}
+                onClick={() => handleQuickCredential('inspector')}
                 disabled={loading}
-                className="flex items-center gap-2 p-2 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-900 transition-all text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 transition-colors text-left"
               >
-                <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-                  <UserCheck className="w-4 h-4" />
+                <div className="w-6 h-6 rounded bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                  <UserCheck className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <div className="text-[11px] font-bold leading-none">👨‍💼 Cán bộ kiểm định</div>
-                  <div className="text-[9px] text-blue-600/80 mt-0.5">canbo@vku.udn.vn</div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Cán bộ khảo sát</div>
+                  <div className="text-[10px] text-slate-500 font-mono truncate">canbo@vku.udn.vn</div>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickDemo('admin')}
+                onClick={() => handleQuickCredential('admin')}
                 disabled={loading}
-                className="flex items-center gap-2 p-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-900 transition-all text-left group"
+                className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 transition-colors text-left"
               >
-                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                  <Shield className="w-4 h-4" />
+                <div className="w-6 h-6 rounded bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <div className="text-[11px] font-bold leading-none">🛡️ Quản trị viên (Admin)</div>
-                  <div className="text-[9px] text-indigo-600/80 mt-0.5">admin@vku.udn.vn</div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Quản trị hệ thống</div>
+                  <div className="text-[10px] text-slate-500 font-mono truncate">admin@vku.udn.vn</div>
                 </div>
               </button>
             </div>
@@ -188,9 +190,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
 
         </div>
 
-        {/* Footer info */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-center text-[10px] text-slate-500">
-          Sinh viên thực hiện: <span className="font-semibold text-slate-700">Lê Cảm (23IT022)</span> • VKU 2025
+        {/* Engineering Attribution Footer */}
+        <div className="px-6 py-2.5 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500">
+          Hệ thống phát triển bởi: <span className="font-semibold text-slate-700">Lê Cảm (23IT022)</span> • VKU
         </div>
 
       </div>

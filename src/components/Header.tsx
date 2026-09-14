@@ -48,8 +48,8 @@ export const Header: React.FC<HeaderProps> = ({ onSwitchToAdmin, onLogout }) => 
                   {t.appName}
                 </h1>
                 {currentUser?.role === 'admin' && (
-                  <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 text-[9px] font-extrabold rounded-full border border-indigo-200">
-                    Admin
+                  <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-semibold rounded border border-slate-200">
+                    Quản trị
                   </span>
                 )}
               </div>
@@ -65,11 +65,11 @@ export const Header: React.FC<HeaderProps> = ({ onSwitchToAdmin, onLogout }) => 
               <button
                 type="button"
                 onClick={onSwitchToAdmin}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold transition-all active:scale-95 shadow-2xs"
-                title="Quay lại Bảng điều hành Quản trị"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-medium transition-all active:scale-95 shadow-2xs"
+                title="Quay lại Bảng điều hành quản trị"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">Admin</span>
+                <LayoutDashboard className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">Bảng điều hành</span>
               </button>
             )}
 

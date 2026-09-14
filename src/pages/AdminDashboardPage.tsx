@@ -228,23 +228,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Navigation Bar */}
-      <header className="bg-vku-800 text-white shadow-md border-b border-vku-700 sticky top-0 z-40">
+      <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-vku-600 flex items-center justify-center font-black text-white text-lg shadow-inner border border-white/20">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-sm">
               VKU
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-sm sm:text-base tracking-tight text-white">
-                  TRUNG TÂM ĐIỀU HÀNH & GIÁM SÁT HIỆN TRƯỜNG
+                  BẢNG ĐIỀU HÀNH & GIÁM SÁT CƠ SỞ VẬT CHẤT
                 </h1>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 uppercase tracking-wider">
-                  Cloudflare KV Live
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-emerald-400 border border-slate-700">
+                  Cloudflare KV Connected
                 </span>
               </div>
-              <p className="text-[11px] text-blue-200 font-medium hidden sm:block">
-                Hệ thống tiếp nhận và quản lý dữ liệu khảo sát cơ sở vật chất tập trung
+              <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
+                Hệ thống tổng hợp và phân tích dữ liệu kiểm định hiện trường theo thời gian thực
               </p>
             </div>
           </div>
@@ -253,41 +253,41 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-vku-600 hover:bg-vku-500 border border-vku-500 text-white text-xs font-semibold transition-all shadow-xs active:scale-95"
-              title="Xuất dữ liệu ra file Excel / CSV"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition-all shadow-xs active:scale-95"
+              title="Xuất dữ liệu định dạng CSV"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Xuất Báo Cáo CSV</span>
+              <span className="hidden sm:inline">Xuất CSV</span>
             </button>
 
             {/* Switch to Inspector Survey Mode */}
             <button
               onClick={onSwitchToInspectorView}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-xs active:scale-95"
-              title="Chuyển sang giao diện PWA khảo sát di động"
+              title="Chuyển sang giao diện khảo sát PWA"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">📱 Mở PWA Khảo Sát</span>
+              <span className="hidden sm:inline">Chế độ Khảo sát</span>
             </button>
 
             <button
               onClick={reloadAll}
-              className="p-2 text-slate-300 hover:text-white hover:bg-vku-700 rounded-lg transition-colors"
-              title="Làm mới dữ liệu"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              title="Làm mới dữ liệu từ máy chủ"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
             {/* User Badge & Logout */}
-            <div className="flex items-center gap-2 pl-2 border-l border-vku-700">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <div className="text-right hidden md:block">
-                <div className="text-xs font-bold text-white">{currentUser?.fullName}</div>
-                <div className="text-[10px] text-blue-200">Quản Trị Viên</div>
+                <div className="text-xs font-semibold text-white">{currentUser?.fullName}</div>
+                <div className="text-[10px] text-slate-400">Quản Trị Viên</div>
               </div>
               <button
                 onClick={onLogout}
-                className="p-2 text-red-300 hover:text-white hover:bg-red-600/50 rounded-lg transition-colors"
-                title="Đăng xuất"
+                className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                title="Đăng xuất khỏi phiên làm việc"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -306,34 +306,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               onClick={() => setActiveAdminTab('surveys')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeAdminTab === 'surveys'
-                  ? 'bg-vku-800 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <Building2 className="w-4 h-4" />
-              <span>Khảo Sát Hiện Trường ({surveys.length})</span>
+              <span>Dữ Liệu Khảo Sát ({surveys.length})</span>
             </button>
 
             <button
               onClick={() => setActiveAdminTab('users')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeAdminTab === 'users'
-                  ? 'bg-vku-800 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Quản Lý Tài Khoản ({users.length})</span>
+              <span>Phân Quyền Người Dùng ({users.length})</span>
             </button>
           </div>
 
           {activeAdminTab === 'users' && (
             <button
               onClick={() => setIsAddUserOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm Tài Khoản</span>
+              <span>Cấp Tài Khoản Mới</span>
             </button>
           )}
         </div>
@@ -345,57 +345,57 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Tổng Phiếu Khảo Sát</span>
+                  <span className="text-xs font-semibold text-slate-500">Tổng Biên Bản</span>
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                     <Building2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-2 text-2xl font-black text-slate-900">{stats.total}</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{stats.total}</div>
                 <p className="text-[11px] text-slate-400 mt-0.5">Dữ liệu trên Cloudflare KV</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-red-200 shadow-xs bg-gradient-to-b from-white to-red-50/30">
+              <div className="bg-white p-4 rounded-xl border border-red-200 shadow-xs bg-gradient-to-b from-white to-red-50/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-red-700">Hư Hỏng Nghiêm Trọng</span>
+                  <span className="text-xs font-semibold text-red-700">Sự Cố Cấp Độ Cao</span>
                   <div className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
                     <AlertTriangle className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-2 text-2xl font-black text-red-600">{stats.critical}</div>
-                <p className="text-[11px] text-red-500 mt-0.5">Mức 1 & 2 (Cần xử lý gấp)</p>
+                <div className="mt-2 text-2xl font-bold text-red-600">{stats.critical}</div>
+                <p className="text-[11px] text-red-500 mt-0.5">Mức 1 & 2 (Ưu tiên xử lý)</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-xs bg-gradient-to-b from-white to-amber-50/30">
+              <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-xs bg-gradient-to-b from-white to-amber-50/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-700">Cần Bảo Trì Định Kỳ</span>
+                  <span className="text-xs font-semibold text-amber-700">Bảo Trì Kỹ Thuật</span>
                   <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
                     <AlertTriangle className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-2 text-2xl font-black text-amber-600">{stats.warning}</div>
+                <div className="mt-2 text-2xl font-bold text-amber-600">{stats.warning}</div>
                 <p className="text-[11px] text-amber-500 mt-0.5">Mức 3 (Trung bình)</p>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs bg-gradient-to-b from-white to-emerald-50/30">
+              <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs bg-gradient-to-b from-white to-emerald-50/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-700">Tình Trạng Tốt</span>
+                  <span className="text-xs font-semibold text-emerald-700">Vận Hành Tốt</span>
                   <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-2 text-2xl font-black text-emerald-600">{stats.good}</div>
-                <p className="text-[11px] text-emerald-600 mt-0.5">Mức 4 & 5 (Hoạt động tốt)</p>
+                <div className="mt-2 text-2xl font-bold text-emerald-600">{stats.good}</div>
+                <p className="text-[11px] text-emerald-600 mt-0.5">Mức 4 & 5 (Đạt tiêu chuẩn)</p>
               </div>
 
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Ảnh Hiện Trường</span>
+                  <span className="text-xs font-semibold text-slate-500">Hồ Sơ Ảnh</span>
                   <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
                     <Camera className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-2 text-2xl font-black text-purple-600">{stats.photos}</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Đính kèm ảnh chứng minh</p>
+                <div className="mt-2 text-2xl font-bold text-purple-600">{stats.photos}</div>
+                <p className="text-[11px] text-slate-400 mt-0.5">Minh chứng đính kèm</p>
               </div>
             </div>
 
