@@ -16,6 +16,7 @@ const dataDir = path.join(__dirname, 'data');
 const uploadsDir = path.join(__dirname, 'uploads');
 const publicDir = path.join(__dirname, 'public');
 const dataFilePath = path.join(dataDir, 'surveys.json');
+const usersFilePath = path.join(dataDir, 'users.json');
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -28,6 +29,47 @@ if (!fs.existsSync(publicDir)) {
 }
 if (!fs.existsSync(dataFilePath)) {
   fs.writeFileSync(dataFilePath, JSON.stringify([], null, 2), 'utf-8');
+}
+
+const DEFAULT_USERS = [
+  {
+    id: 'usr-admin',
+    email: 'admin@vku.udn.vn',
+    fullName: 'Quản Trị Viên VKU',
+    role: 'admin',
+    createdAt: '2025-01-01T00:00:00.000Z',
+    password: 'admin123'
+  },
+  {
+    id: 'usr-inspector',
+    email: 'canbo@vku.udn.vn',
+    fullName: 'Lê Cảm (Cán bộ)',
+    role: 'inspector',
+    inspectorId: 'VKU-2025-01',
+    createdAt: '2025-01-01T00:00:00.000Z',
+    password: '123456'
+  }
+];
+
+if (!fs.existsSync(usersFilePath)) {
+  fs.writeFileSync(usersFilePath, JSON.stringify(DEFAULT_USERS, null, 2), 'utf-8');
+}
+
+function loadUsers() {
+  try {
+    const raw = fs.readFileSync(usersFilePath, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    return DEFAULT_USERS;
+  }
+}
+
+function saveUsers(users) {
+  try {
+    fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving users:', err);
+  }
 }
 
 // Database helper
@@ -201,6 +243,95 @@ app.post('/api/surveys', upload.single('photo'), (req, res) => {
       error: 'Internal server error while persisting survey'
     });
   }
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const users = loadUsers();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác' });
+    }
+
+    const sanitized = {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      inspectorId: user.inspectorId,
+      createdAt: user.createdAt
+    };
+
+    return res.json({ success: true, user: sanitized });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
+
+// POST /api/auth/register
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const newUser = req.body;
+    const users = loadUsers();
+    const cleanEmail = (newUser.email || '').trim().toLowerCase();
+
+    if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Email đã được đăng ký' });
+    }
+
+    const toSave = {
+      id: newUser.id || 'usr-' + Date.now(),
+      email: cleanEmail,
+      fullName: newUser.fullName || 'Người dùng VKU',
+      role: newUser.role || 'inspector',
+      inspectorId: newUser.inspectorId || (newUser.role === 'inspector' ? `VKU-${Math.floor(1000 + Math.random() * 9000)}` : undefined),
+      createdAt: newUser.createdAt || new Date().toISOString(),
+      password: newUser.password || '123456'
+    };
+
+    users.push(toSave);
+    saveUsers(users);
+
+    const sanitized = {
+      id: toSave.id,
+      email: toSave.email,
+      fullName: toSave.fullName,
+      role: toSave.role,
+      inspectorId: toSave.inspectorId,
+      createdAt: toSave.createdAt
+    };
+
+    return res.status(201).json({ success: true, user: sanitized });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
+
+// GET /api/users
+app.get('/api/users', (_req, res) => {
+  const users = loadUsers();
+  const sanitized = users.map(u => ({
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName,
+    role: u.role,
+    inspectorId: u.inspectorId,
+    createdAt: u.createdAt
+  }));
+  return res.json({ success: true, count: sanitized.length, data: sanitized });
+});
+
+// DELETE /api/users/:id
+app.delete('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  const users = loadUsers();
+  const filtered = users.filter(u => u.id !== id);
+  saveUsers(filtered);
+  return res.json({ success: true, message: `User ${id} removed` });
 });
 
 // DELETE /api/surveys/:id - delete a survey (Admin command)

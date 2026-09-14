@@ -1,22 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ConnectivityBanner } from './components/NetworkStatus';
 import { HomePage } from './pages/HomePage';
 import { SurveyPage } from './pages/SurveyPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { AuthPage } from './pages/AuthPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { LayoutDashboard, PlusCircle, History } from 'lucide-react';
 import { useSync } from './hooks/useSync';
 import { useLanguage } from './context/LanguageContext';
+import { authService } from './services/authService';
+import type { User } from './types/user';
 
 export function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser());
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'survey'>('dashboard');
   const [activeTab, setActiveTab] = useState<'home' | 'new-survey' | 'history'>('home');
   const { pendingCount } = useSync();
   const { t } = useLanguage();
 
+  useEffect(() => {
+    return authService.subscribe((user) => {
+      setCurrentUser(user);
+      if (user?.role === 'admin') {
+        setAdminViewMode('dashboard');
+      }
+    });
+  }, []);
+
+  // 1. If not authenticated, render Login/Sign-up
+  if (!currentUser) {
+    return <AuthPage onSuccess={() => {}} />;
+  }
+
+  // 2. If Admin and in Dashboard mode, render Command Center
+  if (currentUser.role === 'admin' && adminViewMode === 'dashboard') {
+    return (
+      <AdminDashboardPage
+        onSwitchToInspectorView={() => setAdminViewMode('survey')}
+        onLogout={() => authService.logout()}
+      />
+    );
+  }
+
+  // 3. Mobile Survey PWA (for Inspector, or Admin in survey preview mode)
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Application Header */}
-      <Header />
+      <Header
+        onSwitchToAdmin={currentUser.role === 'admin' ? () => setAdminViewMode('dashboard') : undefined}
+        onLogout={() => authService.logout()}
+      />
 
       {/* Contextual Network/Sync Banner (only appears when offline or syncing) */}
       <ConnectivityBanner />
