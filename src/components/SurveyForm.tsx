@@ -4,6 +4,7 @@ import { SURVEY_CATEGORIES, type SurveyCategory, type InspectorProfile } from '.
 import { createSurvey } from '../db/surveyRepository';
 import { syncService } from '../services/syncService';
 import { inspectorService } from '../services/inspectorService';
+import { authService } from '../services/authService';
 import { ConditionRating } from './ConditionRating';
 import { PhotoCapture } from './PhotoCapture';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,10 +17,28 @@ interface SurveyFormProps {
 export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
   const { language, t } = useLanguage();
   const { showToast } = useToast();
-  const [inspector, setInspector] = useState<InspectorProfile>(inspectorService.getProfile());
+  const currentUser = authService.getCurrentUser();
+  const defaultProfile: InspectorProfile = {
+    name: currentUser?.fullName || 'Cán bộ khảo sát',
+    inspectorId: currentUser?.inspectorId || (currentUser?.role === 'admin' ? 'ADMIN-01' : 'VKU-INSP'),
+    department: currentUser?.role === 'admin' ? 'Ban Quản Trị Hệ Thống VKU' : 'Tổ Khảo Sát Hiện Trường VKU'
+  };
+  const [inspector, setInspector] = useState<InspectorProfile>(defaultProfile);
 
   useEffect(() => {
-    return inspectorService.subscribe(setInspector);
+    return inspectorService.subscribe((p) => {
+      // Prioritize live auth profile if available
+      const liveUser = authService.getCurrentUser();
+      if (liveUser) {
+        setInspector({
+          name: liveUser.fullName,
+          inspectorId: liveUser.inspectorId || (liveUser.role === 'admin' ? 'ADMIN-01' : 'VKU-INSP'),
+          department: liveUser.role === 'admin' ? 'Ban Quản Trị Hệ Thống VKU' : 'Tổ Khảo Sát Hiện Trường VKU'
+        });
+      } else {
+        setInspector(p);
+      }
+    });
   }, []);
 
   const BUILDINGS = [
@@ -120,6 +139,7 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
 
     try {
       // 1. Save survey locally to IndexedDB as source of truth
+      const liveUser = authService.getCurrentUser();
       const created = await createSurvey({
         building: building.trim(),
         floor: floor.trim(),
@@ -129,7 +149,8 @@ export const SurveyForm: React.FC<SurveyFormProps> = ({ onSuccess }) => {
         defectNotes: defectNotes.trim(),
         photo,
         inspectorName: inspector.name,
-        inspectorId: inspector.inspectorId
+        inspectorId: inspector.inspectorId,
+        createdByEmail: liveUser?.email || ''
       });
 
       // 2. Non-blocking background sync registration & auto-sync trigger

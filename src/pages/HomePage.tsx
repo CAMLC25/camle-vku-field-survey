@@ -5,6 +5,7 @@ import { db } from '../db/database';
 import { useSync } from '../hooks/useSync';
 import { useLanguage } from '../context/LanguageContext';
 import { formatRelativeTime } from '../utils/date';
+import { authService } from '../services/authService';
 
 interface HomePageProps {
   onNavigate: (page: 'home' | 'new-survey' | 'history') => void;
@@ -13,9 +14,22 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { language, t } = useLanguage();
   const { pendingCount, isSyncing, syncNow } = useSync();
+  const currentUser = authService.getCurrentUser();
 
-  // Reactive queries from Dexie IndexedDB
-  const surveys = useLiveQuery(() => db.surveys.toArray(), []) || [];
+  // Reactive queries from Dexie IndexedDB with user scoping
+  const allSurveys = useLiveQuery(() => db.surveys.toArray(), []) || [];
+  
+  const surveys = currentUser?.role === 'admin'
+    ? allSurveys
+    : allSurveys.filter((s) => {
+        if (currentUser?.email && s.createdByEmail) {
+          return s.createdByEmail.toLowerCase() === currentUser.email.toLowerCase();
+        }
+        if (currentUser?.inspectorId && s.inspectorId) {
+          return s.inspectorId === currentUser.inspectorId;
+        }
+        return s.inspectorName === currentUser?.fullName;
+      });
 
   const totalCount = surveys.length;
   const goodCount = surveys.filter((s) => s.condition >= 3).length;

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from '../context/ToastContext';
+import { authService } from '../services/authService';
 
 export const SurveyList: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -30,11 +31,29 @@ export const SurveyList: React.FC = () => {
   const [surveyToDelete, setSurveyToDelete] = useState<Survey | null>(null);
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+  const currentUser = authService.getCurrentUser();
 
   const surveys = useLiveQuery(async () => {
     const list = await db.surveys.toArray();
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, []);
+    const sorted = list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    // Enterprise Data Isolation:
+    // Administrators can inspect all records.
+    // Regular inspectors are strictly scoped to their own activity.
+    if (currentUser?.role === 'admin') {
+      return sorted;
+    }
+
+    return sorted.filter((s) => {
+      if (currentUser?.email && s.createdByEmail) {
+        return s.createdByEmail.toLowerCase() === currentUser.email.toLowerCase();
+      }
+      if (currentUser?.inspectorId && s.inspectorId) {
+        return s.inspectorId === currentUser.inspectorId;
+      }
+      return s.inspectorName === currentUser?.fullName;
+    });
+  }, [currentUser?.id, currentUser?.role]);
 
   if (!surveys) {
     return (
@@ -379,14 +398,17 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={(e) => onDelete(survey, e)}
-            className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-            title={t.btnDelete}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {/* Business Logic: Admin can delete any local survey; Inspector can only delete unsynced drafts */}
+          {(authService.getCurrentUser()?.role === 'admin' || survey.status === 'PENDING_SYNC' || survey.status === 'FAILED') && (
+            <button
+              type="button"
+              onClick={(e) => onDelete(survey, e)}
+              className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+              title={t.btnDelete}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

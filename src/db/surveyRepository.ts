@@ -13,6 +13,7 @@ export interface CreateSurveyInput {
   photo: Blob | null;
   inspectorName?: string;
   inspectorId?: string;
+  createdByEmail?: string;
 }
 
 /**
@@ -34,6 +35,7 @@ export async function createSurvey(input: CreateSurveyInput): Promise<Survey> {
     photo: input.photo,
     inspectorName: input.inspectorName || 'Cán bộ chưa định danh',
     inspectorId: input.inspectorId || '',
+    createdByEmail: input.createdByEmail || '',
     createdAt: now,
     updatedAt: now,
     status: 'PENDING_SYNC',

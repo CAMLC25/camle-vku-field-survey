@@ -78,7 +78,13 @@ class AuthService {
   }
 
   private syncInspectorProfile(user: User) {
-    if (user.role === 'inspector') {
+    if (user.role === 'admin') {
+      inspectorService.saveProfile({
+        name: user.fullName || 'Quản Trị Viên VKU',
+        inspectorId: user.inspectorId || 'ADMIN-01',
+        department: 'Ban Quản Trị Hệ Thống VKU'
+      });
+    } else {
       inspectorService.saveProfile({
         name: user.fullName,
         inspectorId: user.inspectorId || 'VKU-INSP',

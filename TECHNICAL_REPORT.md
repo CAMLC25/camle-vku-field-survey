@@ -13,7 +13,7 @@
   - **PWA Live Demo (Cloudflare Pages):** [https://camle-vku-field-survey.pages.dev](https://camle-vku-field-survey.pages.dev)
   - **Unified Full-Stack Edge (Cloudflare Workers & KV):** [https://camle-vku-field-survey.lecam.workers.dev](https://camle-vku-field-survey.lecam.workers.dev)
 * **💻 GitHub Repository:** [https://github.com/CAMLC25/camle-vku-field-survey](https://github.com/CAMLC25/camle-vku-field-survey)
-* **🎥 Video Demo (Optional):** [Đính kèm link Google Drive / YouTube nếu có]
+* **🎥 Video Demo (Optional):** [...]
 
 ---
 

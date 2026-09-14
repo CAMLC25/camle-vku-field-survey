@@ -27,6 +27,7 @@ export interface Survey {
   photoUrl?: string; // transient preview URL or server static URL
   inspectorName?: string; // Tên cán bộ kiểm định
   inspectorId?: string; // Mã cán bộ / Đơn vị
+  createdByEmail?: string; // Email tài khoản tạo phiếu (Data isolation)
   createdAt: string; // ISO 8601 string
   updatedAt: string; // ISO 8601 string
   status: SurveyStatus;

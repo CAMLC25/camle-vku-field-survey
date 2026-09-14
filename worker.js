@@ -125,6 +125,7 @@ export default {
             const defectNotes = formData.get('defectNotes') || '';
             const inspectorName = formData.get('inspectorName') || 'Cán bộ kiểm định';
             const inspectorId = formData.get('inspectorId') || '';
+            const createdByEmail = formData.get('createdByEmail') || '';
             const createdAt = formData.get('createdAt') || new Date().toISOString();
 
             // Handle photo if present (convert Blob to base64 Data URL)
@@ -154,6 +155,7 @@ export default {
               defectNotes: String(defectNotes),
               inspectorName: String(inspectorName),
               inspectorId: String(inspectorId),
+              createdByEmail: String(createdByEmail),
               photoUrl,
               createdAt: String(createdAt),
               serverSyncedAt: new Date().toISOString()

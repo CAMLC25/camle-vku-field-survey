@@ -50,6 +50,7 @@ export async function uploadSurvey(survey: Survey): Promise<UploadSurveyResponse
   formData.append('defectNotes', survey.defectNotes || '');
   formData.append('inspectorName', survey.inspectorName || 'Cán bộ chưa định danh');
   formData.append('inspectorId', survey.inspectorId || '');
+  formData.append('createdByEmail', survey.createdByEmail || '');
   formData.append('createdAt', survey.createdAt);
   formData.append('updatedAt', survey.updatedAt);
 
