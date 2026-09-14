@@ -1,7 +1,7 @@
 import { getPendingSurveys, updateSurveyStatus, retrySurvey, upsertServerSurveys } from '../db/surveyRepository';
 import { uploadSurvey, fetchServerSurveys, isNetworkError } from './api';
 import { networkService } from './networkService';
-import type { SyncState } from '../types/survey';
+import type { SyncState, Survey } from '../types/survey';
 
 export type SyncListener = (state: {
   status: SyncState;
@@ -175,8 +175,12 @@ class SyncService {
           const result = await uploadSurvey(survey);
 
           if (result && result.success) {
-            // 3. Mark status = SYNCED in IndexedDB
-            await updateSurveyStatus(survey.id, 'SYNCED');
+            // 3. Mark status = SYNCED in IndexedDB and save photoUrl if returned
+            const extra: Partial<Survey> = {};
+            if (result.data?.photoUrl) {
+              extra.photoUrl = result.data.photoUrl;
+            }
+            await updateSurveyStatus(survey.id, 'SYNCED', null, extra);
             succeeded++;
             networkService.reportNetworkSuccess();
             console.log(`[SyncService] Successfully synced survey ${survey.id}`);

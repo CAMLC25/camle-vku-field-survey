@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusCircle, History, ArrowRight, Building2, CheckCircle2, AlertTriangle, Clock, RefreshCw, Star, Layers } from 'lucide-react';
+import { PlusCircle, History, ArrowRight, Building2, CheckCircle2, AlertTriangle, Clock, RefreshCw, Star, Layers, Camera } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { useSync } from '../hooks/useSync';
@@ -219,6 +219,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                       <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">
                         {survey.category}
                       </span>
+                      {(survey.photo || survey.photoUrl) && (
+                        <span className="text-[10px] px-1 py-0.2 rounded bg-blue-50 text-blue-600 font-medium inline-flex items-center gap-0.5" title="Có ảnh tư liệu">
+                          <Camera className="w-2.5 h-2.5" />
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                       <span className="flex items-center text-amber-500 font-semibold">

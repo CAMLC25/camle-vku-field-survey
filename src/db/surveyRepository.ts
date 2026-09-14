@@ -84,8 +84,8 @@ export async function upsertServerSurveys(serverList: any[]): Promise<number> {
         category: item.category || 'Hardware',
         condition: typeof item.condition === 'number' ? item.condition : 3,
         defectNotes: item.defectNotes || '',
-        photo: null,
-        photoUrl: item.photoUrl || undefined,
+        photo: existing?.photo || null,
+        photoUrl: item.photoUrl || existing?.photoUrl || undefined,
         inspectorName: item.inspectorName || 'Cán bộ kiểm định',
         inspectorId: item.inspectorId || '',
         createdByEmail: item.createdByEmail || '',
@@ -128,7 +128,8 @@ export async function getPendingSurveys(): Promise<Survey[]> {
 export async function updateSurveyStatus(
   id: string,
   status: SurveyStatus,
-  error: string | null = null
+  error: string | null = null,
+  extraUpdates?: Partial<Survey>
 ): Promise<void> {
   const survey = await db.surveys.get(id);
   if (!survey) return;
@@ -136,7 +137,8 @@ export async function updateSurveyStatus(
   const updates: Partial<Survey> = {
     status,
     updatedAt: new Date().toISOString(),
-    lastSyncError: error
+    lastSyncError: error,
+    ...extraUpdates
   };
 
   if (status === 'SYNCING') {

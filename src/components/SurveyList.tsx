@@ -272,7 +272,7 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
   onRetry,
   onOpenPhoto
 }) => {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(survey.photoUrl || null);
   const { t, language } = useLanguage();
 
   const categoryLabels: Record<string, string> = {
@@ -288,14 +288,18 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
       const url = URL.createObjectURL(survey.photo);
       setPhotoUrl(url);
       return () => URL.revokeObjectURL(url);
+    } else if (survey.photoUrl) {
+      setPhotoUrl(survey.photoUrl);
+    } else {
+      setPhotoUrl(null);
     }
-  }, [survey.photo]);
+  }, [survey.photo, survey.photoUrl]);
 
   return (
     <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs hover:shadow-md transition-shadow">
-      {/* Top row: Building, room, status badge */}
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      {/* Top row: Building, room, photo thumbnail and status badge */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800">
             <Building2 className="w-3.5 h-3.5 text-vku-600" />
             <span>{survey.building}</span>
@@ -328,7 +332,28 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
           </div>
         </div>
 
-        <div>{renderStatusBadge(survey.status)}</div>
+        {/* Right side: Status badge & Photo thumbnail */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {renderStatusBadge(survey.status)}
+          {photoUrl && (
+            <button
+              type="button"
+              onClick={() => onOpenPhoto(photoUrl)}
+              className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-vku-200 hover:border-vku-500 shadow-2xs hover:scale-105 transition-all group shrink-0"
+              title={language === 'vi' ? 'Nhấn để xem ảnh phóng to' : 'Click to enlarge photo'}
+            >
+              <img
+                src={photoUrl}
+                alt="Ảnh hiện trường"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                <ImageIcon className="w-3.5 h-3.5" />
+              </div>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Defect notes */}
