@@ -1,5 +1,6 @@
 import type { User, UserRole, AuthSession } from '../types/user';
 import { inspectorService } from './inspectorService';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 const SESSION_KEY = 'vku_survey_session';
 const USERS_KEY = 'vku_survey_users';
@@ -120,7 +121,7 @@ class AuthService {
 
     // 1. Try online server login first
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, password })
@@ -192,7 +193,7 @@ class AuthService {
 
     // 2. Attempt to sync with Server (Cloudflare KV)
     try {
-      await fetch('/api/auth/register', {
+      await fetch(`${getApiBaseUrl()}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
@@ -229,7 +230,7 @@ class AuthService {
 
   public async getUsers(): Promise<User[]> {
     try {
-      const res = await fetch('/api/users');
+      const res = await fetch(`${getApiBaseUrl()}/api/users`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
@@ -257,7 +258,7 @@ class AuthService {
     this.saveLocalUsers(filtered);
 
     try {
-      await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      await fetch(`${getApiBaseUrl()}/api/users/${id}`, { method: 'DELETE' });
     } catch (e) {
       console.warn('Failed to delete on server:', e);
     }

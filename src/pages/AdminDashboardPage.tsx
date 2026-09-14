@@ -18,6 +18,7 @@ import {
   Users
 } from 'lucide-react';
 import { authService } from '../services/authService';
+import { getApiBaseUrl } from '../config/apiConfig';
 import type { User, UserRole } from '../types/user';
 
 interface SurveyItem {
@@ -67,7 +68,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const fetchSurveysData = async () => {
     try {
-      const res = await fetch('/api/surveys');
+      const res = await fetch(`${getApiBaseUrl()}/api/surveys`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
@@ -133,7 +134,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleDeleteSurvey = async (id: string) => {
     if (!confirm(`Bạn có chắc muốn xóa phiếu khảo sát ${id} khỏi máy chủ Cloudflare?`)) return;
     try {
-      const res = await fetch(`/api/surveys/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${getApiBaseUrl()}/api/surveys/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setSurveys((prev) => prev.filter((s) => s.id !== id));
       }

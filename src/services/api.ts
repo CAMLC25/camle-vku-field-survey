@@ -1,8 +1,8 @@
 import type { Survey } from '../types/survey';
+import { getApiBaseUrl } from '../config/apiConfig';
 
-// In dev, Vite proxies /api to http://localhost:3001. In production or Capacitor Android,
-// configure appropriate base URL or relative path.
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Resolves dynamically: on Native Android Capacitor, routes to Cloudflare Worker.
+const API_BASE = getApiBaseUrl();
 
 export interface UploadSurveyResponse {
   success: boolean;
