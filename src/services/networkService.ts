@@ -66,6 +66,16 @@ class NetworkService {
     window.addEventListener('focus', () => {
       this.verifyConnectivity(true);
     });
+
+    // iOS Standalone PWA Touch-Wakeup: when offline, any user touch/tap on the screen
+    // immediately probes the network, solving iOS WebKit silent network reconnection
+    const handleTouchWakeup = () => {
+      if (!this.isConnected) {
+        this.verifyConnectivity(true);
+      }
+    };
+    window.addEventListener('touchstart', handleTouchWakeup, { passive: true });
+    window.addEventListener('click', handleTouchWakeup, { passive: true });
   }
 
   /**
