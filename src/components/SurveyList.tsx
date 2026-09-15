@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { deleteSurvey } from '../db/surveyRepository';
 import { syncService } from '../services/syncService';
+import { deleteSurveyFromServer } from '../services/api';
+import { networkService } from '../services/networkService';
 import { formatDateTime, formatRelativeTime } from '../utils/date';
 import type { Survey, SurveyStatus } from '../types/survey';
 import { useLanguage } from '../context/LanguageContext';
@@ -90,7 +92,19 @@ export const SurveyList: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!surveyToDelete) return;
     try {
-      await deleteSurvey(surveyToDelete.id);
+      const id = surveyToDelete.id;
+      const wasSynced = surveyToDelete.status === 'SYNCED';
+
+      // 1. Delete from local IndexedDB
+      await deleteSurvey(id);
+
+      // 2. If survey was already synced to cloud, or device is currently online, delete from Cloudflare KV
+      if (wasSynced || networkService.isCurrentConnected()) {
+        deleteSurveyFromServer(id).catch((err) => {
+          console.warn('[SurveyList] Failed to delete survey from server:', err);
+        });
+      }
+
       showToast({
         type: 'info',
         title: language === 'vi' ? 'Đã xóa biên bản' : 'Survey Deleted',
@@ -239,8 +253,10 @@ export const SurveyList: React.FC = () => {
         title={language === 'vi' ? 'Xác nhận xóa biên bản?' : 'Delete Inspection Record?'}
         message={
           language === 'vi'
-            ? 'Biên bản khảo sát này sẽ bị xóa vĩnh viễn khỏi bộ nhớ cục bộ của thiết bị.'
-            : 'This field survey record will be permanently removed from device storage.'
+            ? surveyToDelete?.status === 'SYNCED'
+              ? 'Biên bản này đã được đồng bộ lên máy chủ. Xóa biên bản sẽ xóa vĩnh viễn cả trên thiết bị và cơ sở dữ liệu máy chủ Cloudflare.'
+              : 'Biên bản khảo sát này sẽ bị xóa vĩnh viễn khỏi bộ nhớ cục bộ của thiết bị.'
+            : 'This field survey record will be permanently deleted from local device and cloud.'
         }
         itemDetails={
           surveyToDelete
@@ -432,17 +448,26 @@ const SurveyCard: React.FC<SurveyCardProps> = ({
             </button>
           )}
 
-          {/* Business Logic: Admin can delete any local survey; Inspector can only delete unsynced drafts */}
-          {(authService.getCurrentUser()?.role === 'admin' || survey.status === 'PENDING_SYNC' || survey.status === 'FAILED') && (
-            <button
-              type="button"
-              onClick={(e) => onDelete(survey, e)}
-              className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-              title={t.btnDelete}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {/* Authorization: Admin can delete any survey; Inspector can delete their own surveys or any unsynced local drafts */}
+          {(() => {
+            const currentUser = authService.getCurrentUser();
+            const isOwner = Boolean(
+              (currentUser?.email && survey.createdByEmail && survey.createdByEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+              (currentUser?.inspectorId && survey.inspectorId && survey.inspectorId === currentUser.inspectorId)
+            );
+            const canDelete = currentUser?.role === 'admin' || isOwner || survey.status === 'PENDING_SYNC' || survey.status === 'FAILED';
+
+            return canDelete ? (
+              <button
+                type="button"
+                onClick={(e) => onDelete(survey, e)}
+                className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                title={t.btnDelete}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            ) : null;
+          })()}
         </div>
       </div>
     </div>

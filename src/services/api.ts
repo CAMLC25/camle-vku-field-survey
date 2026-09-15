@@ -291,3 +291,23 @@ export async function checkServerHealth(): Promise<boolean> {
   }
 }
 
+/**
+ * Deletes a survey from Cloudflare KV central backend.
+ */
+export async function deleteSurveyFromServer(id: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${API_BASE}/api/surveys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch (err) {
+    console.warn('[api] Failed to delete survey from server:', err);
+    return false;
+  }
+}
+
