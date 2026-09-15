@@ -92,8 +92,8 @@ export default {
       }
     }
 
-    // Route: /api/surveys
-    if (url.pathname === '/api/surveys') {
+    // Route: /api/surveys and /api/surveys/batch
+    if (url.pathname === '/api/surveys' || url.pathname === '/api/surveys/batch') {
       // GET /api/surveys - list all surveys
       if (request.method === 'GET') {
         const surveys = await getSurveysFromKV();
@@ -107,10 +107,67 @@ export default {
         );
       }
 
-      // POST /api/surveys - create/sync a survey
+      // POST /api/surveys or /api/surveys/batch - create/sync surveys
       if (request.method === 'POST') {
         try {
           const contentType = request.headers.get('content-type') || '';
+
+          // 1. FAST BATCH SYNC: Handles multiple surveys in a single HTTP request & single KV write
+          if (contentType.includes('application/json')) {
+            try {
+              const body = await request.json();
+              if (body && Array.isArray(body.surveys)) {
+                const incomingList = body.surveys;
+                const existingList = await getSurveysFromKV();
+                const syncedIds = [];
+
+                for (const item of incomingList) {
+                  if (!item || !item.id) continue;
+                  const surveyData = {
+                    id: String(item.id),
+                    building: String(item.building || 'Khu V'),
+                    floor: String(item.floor || 'Tầng 1'),
+                    room: String(item.room || 'V.101'),
+                    category: String(item.category || 'Thiết bị CNTT / PC'),
+                    condition: typeof item.condition === 'number' ? item.condition : 3,
+                    defectNotes: String(item.defectNotes || ''),
+                    inspectorName: String(item.inspectorName || 'Cán bộ kiểm định'),
+                    inspectorId: String(item.inspectorId || ''),
+                    createdByEmail: String(item.createdByEmail || ''),
+                    photoUrl: item.photoUrl || null,
+                    createdAt: String(item.createdAt || new Date().toISOString()),
+                    serverSyncedAt: new Date().toISOString()
+                  };
+
+                  const existingIndex = existingList.findIndex((s) => s.id === surveyData.id);
+                  if (existingIndex >= 0) {
+                    if (!surveyData.photoUrl && existingList[existingIndex].photoUrl) {
+                      surveyData.photoUrl = existingList[existingIndex].photoUrl;
+                    }
+                    existingList[existingIndex] = surveyData;
+                  } else {
+                    existingList.unshift(surveyData);
+                  }
+                  syncedIds.push(surveyData.id);
+                }
+
+                await saveSurveysToKV(existingList);
+
+                return new Response(
+                  JSON.stringify({
+                    success: true,
+                    count: syncedIds.length,
+                    syncedIds,
+                    message: `Đã đồng bộ thành công ${syncedIds.length} biên bản vào Cloudflare KV`
+                  }),
+                  { status: 200, headers: corsHeaders }
+                );
+              }
+            } catch (jsonErr) {
+              console.warn('JSON parsing error in batch upload:', jsonErr);
+            }
+          }
+
           let surveyData = {};
           let photoUrl = null;
 

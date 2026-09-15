@@ -1,5 +1,17 @@
-import { getPendingSurveys, updateSurveyStatus, retrySurvey, upsertServerSurveys } from '../db/surveyRepository';
-import { uploadSurvey, fetchServerSurveys, isNetworkError } from './api';
+import {
+  getPendingSurveys,
+  updateSurveyStatus,
+  retrySurvey,
+  upsertServerSurveys,
+  resetStuckSyncingSurveys,
+  markSurveysAsSyncedBatch
+} from '../db/surveyRepository';
+import {
+  uploadSurvey,
+  uploadSurveysBatch,
+  fetchServerSurveys,
+  isNetworkError
+} from './api';
 import { networkService } from './networkService';
 import type { SyncState, Survey } from '../types/survey';
 
@@ -42,11 +54,20 @@ class SyncService {
     if (this.initialized) return;
     this.initialized = true;
 
-    // Trigger 1: Network connectivity restored
+    // 0. Startup recovery: reset any stuck SYNCING records back to PENDING_SYNC
+    resetStuckSyncingSurveys().catch(() => {});
+
+    // Trigger 1: Network connectivity restored with multi-stage verification
     networkService.addListener((connected) => {
       if (connected) {
-        console.log('[SyncService] Network restored. Debouncing bi-directional sync...');
+        console.log('[SyncService] Network restored. Triggering agile sync...');
         this.triggerBiDirectionalSync(400);
+        // Safety staged trigger: Mobile Wi-Fi/4G takes 2-3s to obtain IP / DNS routing
+        setTimeout(() => {
+          if (networkService.isCurrentConnected()) {
+            this.triggerBiDirectionalSync(200);
+          }
+        }, 2500);
       }
     });
 
@@ -155,6 +176,9 @@ class SyncService {
     this.lastError = null;
     this.notify();
 
+    // 1. Always recover stuck SYNCING records back to PENDING_SYNC before pulling queue
+    await resetStuckSyncingSurveys().catch(() => {});
+
     let processed = 0;
     let succeeded = 0;
     let failed = 0;
@@ -172,23 +196,62 @@ class SyncService {
         return { processed: 0, succeeded: 0, failed: 0 };
       }
 
+      // 2. High-Performance BATCH SYNC:
+      // When 2 or more surveys are pending, upload all in 1 single HTTP request.
+      // This solves the Cloudflare KV 1-write/second rate limit and prevents mobile network timeouts.
+      if (pending.length > 1) {
+        try {
+          console.log(`[SyncService] Attempting fast batch sync for ${pending.length} surveys...`);
+          const batchResult = await uploadSurveysBatch(pending);
+
+          if (batchResult && batchResult.success && Array.isArray(batchResult.syncedIds) && batchResult.syncedIds.length > 0) {
+            const photoMap: Record<string, string> = {};
+            if (Array.isArray(batchResult.surveys)) {
+              for (const s of batchResult.surveys) {
+                if (s.id && s.photoUrl) photoMap[s.id] = s.photoUrl;
+              }
+            }
+
+            await markSurveysAsSyncedBatch(batchResult.syncedIds, photoMap);
+            succeeded = batchResult.syncedIds.length;
+            processed = pending.length;
+            this.lastSyncTime = new Date().toISOString();
+            this.syncState = 'SYNCED';
+            networkService.reportNetworkSuccess();
+            console.log(`[SyncService] Batch sync succeeded: ${succeeded}/${pending.length} surveys synchronized in 1 request.`);
+            return { processed, succeeded, failed: 0 };
+          }
+        } catch (batchErr: any) {
+          console.warn('[SyncService] Batch sync encountered an issue, falling back to sequential sync:', batchErr?.message);
+          if (isNetworkError(batchErr)) {
+            const isStillConnected = await networkService.verifyConnectivity(true);
+            if (!isStillConnected) {
+              this.syncState = 'IDLE';
+              this.lastError = 'Mạng yếu hoặc mất kết nối. Dữ liệu vẫn được bảo vệ an toàn trên máy.';
+              this.notify();
+              return { processed: 0, succeeded: 0, failed: 0 };
+            }
+          }
+        }
+      }
+
       console.log(`[SyncService] Starting sequential sync for ${pending.length} surveys...`);
 
-      // Sequential processing: strictly one-by-one
+      // 3. Fallback / Single: Sequential processing one-by-one
       for (const survey of pending) {
         this.currentSurveyId = survey.id;
         processed++;
 
-        // 1. Mark status = SYNCING in IndexedDB
+        // Mark status = SYNCING in IndexedDB
         await updateSurveyStatus(survey.id, 'SYNCING');
         this.notify();
 
         try {
-          // 2. Upload survey and await response
+          // Upload survey and await response
           const result = await uploadSurvey(survey);
 
           if (result && result.success) {
-            // 3. Mark status = SYNCED in IndexedDB and preserve photoUrl
+            // Mark status = SYNCED in IndexedDB and preserve photoUrl
             const extra: Partial<Survey> = {
               photoUrl: result.data?.photoUrl || survey.photoUrl
             };
@@ -203,20 +266,26 @@ class SyncService {
           const isNetworkIssue = isNetworkError(err);
 
           if (isNetworkIssue) {
-            // Network dropped or timed out on weak mobile signal
-            // CRITICAL: DO NOT mark survey as FAILED! Revert to PENDING_SYNC!
-            console.warn(`[SyncService] Network drop while syncing survey ${survey.id}:`, err?.message);
+            console.warn(`[SyncService] Network issue while syncing survey ${survey.id}:`, err?.message);
+            // Revert back to PENDING_SYNC safely
             await updateSurveyStatus(
               survey.id,
               'PENDING_SYNC',
               'Đã lưu an toàn trên máy (sẽ tự gửi lại khi có mạng ổn định)'
             );
-            networkService.reportNetworkFailure();
-            stoppedEarlyDueToNetwork = true;
-            // Stop the loop immediately so other surveys don't hang and freeze UI
-            break;
+
+            // Check if connection is genuinely dead before aborting the whole queue
+            const isAlive = await networkService.verifyConnectivity(true);
+            if (!isAlive) {
+              networkService.reportNetworkFailure();
+              stoppedEarlyDueToNetwork = true;
+              break;
+            } else {
+              console.log('[SyncService] Network still responsive. Pausing briefly before trying next record...');
+              await new Promise((resolve) => setTimeout(resolve, 800));
+            }
           } else {
-            // Permanent data / server error (e.g. 400 Bad Request)
+            // Permanent data error (e.g. 400 Bad Request)
             const errMsg = err?.message || 'Lỗi xử lý dữ liệu từ máy chủ';
             console.error(`[SyncService] Survey data rejected by server ${survey.id}:`, errMsg);
             await updateSurveyStatus(survey.id, 'FAILED', errMsg);
@@ -225,13 +294,12 @@ class SyncService {
           }
         }
 
-        // Small delay between uploads for visual feedback
+        // Small delay between uploads
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
       this.lastSyncTime = new Date().toISOString();
       if (stoppedEarlyDueToNetwork) {
-        // Paused cleanly without alarming the user
         this.syncState = 'IDLE';
         this.lastError = 'Mạng yếu hoặc mất kết nối. Dữ liệu vẫn được bảo vệ an toàn.';
       } else {

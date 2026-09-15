@@ -133,14 +133,54 @@ export async function getSurveyById(id: string): Promise<Survey | undefined> {
 }
 
 /**
- * Retrieves all surveys that are either PENDING_SYNC or FAILED.
+ * Retrieves all surveys that are pending dispatch (PENDING_SYNC, SYNCING, or FAILED).
+ * Crucial fix: Includes stuck 'SYNCING' surveys so unexpected disconnects don't orphan records.
  */
 export async function getPendingSurveys(): Promise<Survey[]> {
   const pending = await db.surveys
     .where('status')
-    .anyOf('PENDING_SYNC', 'FAILED')
+    .anyOf('PENDING_SYNC', 'SYNCING', 'FAILED')
     .toArray();
   return pending.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+/**
+ * Resets any lingering 'SYNCING' surveys back to 'PENDING_SYNC' on startup or network reconnect.
+ */
+export async function resetStuckSyncingSurveys(): Promise<number> {
+  return await db.surveys
+    .where('status')
+    .equals('SYNCING')
+    .modify({
+      status: 'PENDING_SYNC',
+      lastSyncError: 'Khôi phục hàng đợi sau gián đoạn kết nối'
+    });
+}
+
+/**
+ * Marks multiple surveys as SYNCED in IndexedDB in a single fast ACID transaction.
+ */
+export async function markSurveysAsSyncedBatch(
+  syncedIds: string[],
+  photoUrlMap?: Record<string, string>
+): Promise<void> {
+  if (!syncedIds || syncedIds.length === 0) return;
+  const now = new Date().toISOString();
+
+  await db.transaction('rw', db.surveys, db.syncQueue, async () => {
+    for (const id of syncedIds) {
+      const survey = await db.surveys.get(id);
+      if (survey) {
+        await db.surveys.update(id, {
+          status: 'SYNCED',
+          updatedAt: now,
+          lastSyncError: null,
+          photoUrl: photoUrlMap?.[id] || survey.photoUrl
+        });
+        await dequeueSurvey(id);
+      }
+    }
+  });
 }
 
 /**
